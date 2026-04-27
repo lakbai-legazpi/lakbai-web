@@ -10,7 +10,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum ContributionStatus {
@@ -25,255 +25,267 @@ enum ContributionType {
 }
 
 model User {
-  id             String         @id
-  email          String         @unique
-  name           String?
-  firstName      String?
-  lastName       String?
-  username       String?        @unique
-  avatarUrl      String?
-  location       String?
-  bio            String?        @db.Text
-  facebookUrl    String?
-  instagramUrl   String?
-  tiktokUrl      String?
-  youtubeUrl     String?
+  id           String  @id
+  email        String  @unique
+  name         String?
+  firstName    String?
+  lastName     String?
+  username     String? @unique
+  avatarUrl    String?
+  location     String?
+  bio          String? @db.Text
+  facebookUrl  String?
+  instagramUrl String?
+  tiktokUrl    String?
+  youtubeUrl   String?
 
-  reviews        POIReview[]
-  vouches        POIVouch[]
-  favorites      POIFavorite[]
-  journeys       Journey[]
-  contributions  Contribution[]
+  reviews       POIReview[]
+  vouches       POIVouch[]
+  favorites     POIFavorite[]
+  journeys      Journey[]
+  contributions Contribution[]
 
-  createdAt      DateTime       @default(now())
+  createdAt DateTime @default(now())
 }
 
 model POI {
-  id               String         @id @default(cuid())
-  name             String
-  description      String         @db.Text
-  latitude         Float          
-  longitude        Float          
-  vouchCount       Int            @default(0) 
-  primaryTagId     String?
-  primaryTag       POITag?        @relation("POIPrimaryTag", fields: [primaryTagId], references: [id], onDelete: SetNull)
-  
-  // Relations
-  tags             POITag[]       @relation("POITags")
-  address          POIAddress?
-  galleries        POIGallery[]
-  operatingHours   OperatingHours[]
-  reviews          POIReview[]
-  vouches          POIVouch[]
-  favorites        POIFavorite[]
-  itineraryItems   ItineraryItem[]
-  contributions    Contribution[]
+  id           String  @id @default(cuid())
+  name         String
+  description  String  @db.Text
+  phoneNumber  String?
+  email        String?
+  latitude     Float
+  longitude    Float
+  vouchCount   Int     @default(0)
+  primaryTagId String?
+  primaryTag   POITag? @relation("POIPrimaryTag", fields: [primaryTagId], references: [id], onDelete: SetNull)
 
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  // Relations
+  tags           POITag[]         @relation("POITags")
+  address        POIAddress?
+  galleries      POIGallery[]
+  operatingHours OperatingHours[]
+  reviews        POIReview[]
+  vouches        POIVouch[]
+  favorites      POIFavorite[]
+  itineraryItems ItineraryItem[]
+  contributions  Contribution[]
+  links          POILink[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([primaryTagId])
 }
 
+model POILink {
+  id    String @id @default(cuid())
+  poiId String
+  poi   POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  label String
+  url   String
+
+  @@index([poiId])
+}
+
 model POIAddress {
-  id                 String    @id @default(cuid())
-  poiId              String    @unique
-  poi                POI       @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  id    String @id @default(cuid())
+  poiId String @unique
+  poi   POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
 
   // Single flexible address form for subdivision and rural/informal entries.
   // All fields are optional so admins can still review and complete partial submissions.
-  blockLotNumber     String?
-  houseNumber        String?
-  purok              String?
-  street             String?
-  subdivisionName    String?
-  barangay           String?
-  cityMunicipality   String?
-  province           String?
-  postalCode         String?
+  blockLotNumber   String?
+  houseNumber      String?
+  purok            String?
+  street           String?
+  subdivisionName  String?
+  barangay         String?
+  cityMunicipality String?
+  province         String?
+  postalCode       String?
 
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model POITagCluster {
-  id          String   @id // e.g. 'FOOD', 'ATTRACTIONS'
-  name        String   @unique // display label
-  iconName    String   // e.g. 'Utensils', 'Landmark'
+  id       String @id // e.g. 'FOOD', 'ATTRACTIONS'
+  name     String @unique // display label
+  iconName String // e.g. 'Utensils', 'Landmark'
 
-  tags        POITag[]
+  tags POITag[]
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model POITag {
-  id          String   @id // e.g., "Park", "Restaurant", "Hotel"
-  name        String   @unique
-  iconName    String?  // user suggested icon, e.g., 'Coffee'
-  
-  clusterId   String?
-  cluster     POITagCluster? @relation(fields: [clusterId], references: [id])
-  
-  pois        POI[]    @relation("POITags") // <--- Many-to-many relation back to POI
+  id       String  @id // e.g., "Park", "Restaurant", "Hotel"
+  name     String  @unique
+  iconName String? // user suggested icon, e.g., 'Coffee'
+
+  clusterId String?
+  cluster   POITagCluster? @relation(fields: [clusterId], references: [id])
+
+  pois           POI[] @relation("POITags") // <--- Many-to-many relation back to POI
   primaryForPOIs POI[] @relation("POIPrimaryTag")
 }
 
 model POIGallery {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  poiId     String
-  poi       POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-  imageUrl  String   
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  poiId    String
+  poi      POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  imageUrl String
 
   createdAt DateTime @default(now())
 }
 
 model OperatingHours {
-  id        String   @id @default(cuid())
-  poiId     String
-  poi       POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  id    String @id @default(cuid())
+  poiId String
+  poi   POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
 
-  dayOfWeek Int      // 0 (Sun) to 6 (Sat)
-  openTime  String?  // Format: "HH:mm" (e.g., "08:00")
-  closeTime String?  // Format: "HH:mm" (e.g., "22:00")
-  isClosed  Boolean  @default(false)
-  is24Hours Boolean  @default(false)
+  dayOfWeek Int // 0 (Sun) to 6 (Sat)
+  openTime  String? // Format: "HH:mm" (e.g., "08:00")
+  closeTime String? // Format: "HH:mm" (e.g., "22:00")
+  isClosed  Boolean @default(false)
+  is24Hours Boolean @default(false)
 
   @@unique([poiId, dayOfWeek])
 }
 
 model POIReview {
+  id      String @id @default(cuid())
+  poiId   String
+  poi     POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating  Int
+  content String @db.Text
 
-  id        String   @id @default(cuid())
-  poiId     String
-  poi       POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rating    Int      
-  content   String   @db.Text
-
-  history   POIReviewHistory[]
+  history POIReviewHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model POIReviewHistory {
-  id               String    @id @default(cuid())
-  reviewId         String
-  review           POIReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  
-  previousContent  String    @db.Text
-  previousRating   Int
-  
-  changedAt        DateTime  @default(now())
+  id       String    @id @default(cuid())
+  reviewId String
+  review   POIReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  previousContent String @db.Text
+  previousRating  Int
+
+  changedAt DateTime @default(now())
 }
 
 model POIVouch {
-  id        String   @id @default(cuid())
-  poiId     String
-  poi       POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  poiId  String
+  poi    POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([poiId, userId]) 
+  @@unique([poiId, userId])
 }
 
 model POIFavorite {
-  id        String   @id @default(cuid())
-  poiId     String
-  poi       POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  poiId  String
+  poi    POI    @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
-  @@unique([poiId, userId]) 
+  @@unique([poiId, userId])
 }
 
 model Journey {
-  id              String         @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String?
-  user            User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title           String
-  description     String?        @db.Text
+  description     String?   @db.Text
   destination     String?
   startDate       DateTime?
   endDate         DateTime?
-  isFlexibleDates Boolean        @default(false)
-  companions      String?        
-  preferences     String?        @db.Text
+  isFlexibleDates Boolean   @default(false)
+  companions      String?
+  preferences     String?   @db.Text
   budget          Int?
-  
-  chats           Chat[]
-  itineraryItems  ItineraryItem[]
-  
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+
+  chats          Chat[]
+  itineraryItems ItineraryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Chat {
-  id              String         @id @default(cuid())
-  journeyId       String?
-  journey         Journey?       @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  title           String
-  
-  messages        Message[]
-  
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id        String   @id @default(cuid())
+  journeyId String?
+  journey   Journey? @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  title     String
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Message {
-  id              String         @id @default(cuid())
-  chatId          String
-  chat            Chat           @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  role            String         // "user" or "ai"
-  content         String         @db.Text
-  
-  createdAt       DateTime       @default(now())
+  id      String @id @default(cuid())
+  chatId  String
+  chat    Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role    String // "user" or "ai"
+  content String @db.Text
+
+  createdAt DateTime @default(now())
 }
 
 model ItineraryItem {
-  id              String         @id @default(cuid())
-  journeyId       String
-  journey         Journey        @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  poiId           String
-  poi             POI            @relation(fields: [poiId], references: [id], onDelete: Cascade)
-  dayNumber       Int?
-  orderIndex      Int            @default(0)
-  startTime       String?
-  endTime         String?
-  notes           String?        @db.Text
-  
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id         String  @id @default(cuid())
+  journeyId  String
+  journey    Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  poiId      String
+  poi        POI     @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  dayNumber  Int?
+  orderIndex Int     @default(0)
+  startTime  String?
+  endTime    String?
+  notes      String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([journeyId, dayNumber, orderIndex])
 }
 
 model Contribution {
-  id           String             @id @default(cuid())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type         ContributionType
-  status       ContributionStatus @default(PENDING)
+  type   ContributionType
+  status ContributionStatus @default(PENDING)
 
   /// Full POI payload (name, description, coords, tags, hours, address)
   proposedData Json
 
   /// Only set when type === UPDATE — links to the POI being edited
-  poiId        String?
-  poi          POI?               @relation(fields: [poiId], references: [id], onDelete: SetNull)
+  poiId String?
+  poi   POI?    @relation(fields: [poiId], references: [id], onDelete: SetNull)
 
   /// Optional rejection/approval notes from the admin
-  adminNotes   String?            @db.Text
-  reviewedAt   DateTime?
+  adminNotes String?   @db.Text
+  reviewedAt DateTime?
 
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([userId])

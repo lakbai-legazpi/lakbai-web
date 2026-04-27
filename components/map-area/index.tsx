@@ -218,7 +218,7 @@ export default function MapArea({
 
       {selectedPoi && !isAddLocationMode && (
         <PoiDetailsOverlay
-          poi={selectedPoi}
+          poi={selectedPoi as any}
           copied={copied}
           onClose={handleClosePoi}
           onCopyShareUrl={handleCopyShareUrl}

@@ -35,5 +35,5 @@ export default async function ProfileSettingsPage() {
     redirect('/chat');
   }
 
-  return <EditProfileSettings profile={profile} />;
+  return <EditProfileSettings profile={{ ...profile, username: profile.username || '' }} />;
 }

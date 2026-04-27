@@ -12,67 +12,112 @@ import {
   PlusCircle,
   ExternalLink,
   Phone,
+  Mail,
   MapPinned,
   MapPin
 } from 'lucide-react';
 
 import PoiMapCanvas from '@/components/map-area/PoiMapCanvas';
-import type { POI } from '@/components/map-area/types';
 import PoiFullscreenGallery from './PoiFullscreenGallery';
 import { getTagLabel, getTagVisual } from './get-tag-icon';
-import { getPOIStatus, getDayLabel, formatSchedule } from './get-poi-status';
 import { TextHeading, TextBody } from '@/components/text';
 import { cn } from '@/lib/cn';
 
-type DetailTab = 'description' | 'reviews' | 'location';
-
-type MockReview = {
+export type POIWithRelations = {
   id: string;
-  profileName: string;
-  date: string;
-  rating: string;
-  content: string;
-  badges: string[];
+  name: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  phoneNumber: string | null;
+  email: string | null;
+  address: {
+    street: string | null;
+    barangay: string | null;
+    city: string;
+    province: string;
+  } | null;
+  operatingHours: {
+    dayOfWeek: number;
+    openTime: string | null;
+    closeTime: string | null;
+    isClosed: boolean;
+    is24Hours: boolean;
+  }[];
+  links: {
+    label: string;
+    url: string;
+    iconType: string; // e.g., 'facebook', 'instagram', 'globe'
+  }[];
+  galleries: {
+    id: string;
+    imageUrl: string;
+  }[];
+  reviews: {
+    id: string;
+    rating: number;
+    content: string;
+    createdAt: string | Date;
+    user: {
+      name: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      avatarUrl: string | null;
+    };
+  }[];
+
+  // Retained for existing tag logic compatibility
+  vouchCount?: number;
+  tags?: any[];
+  primaryTagId?: string | null;
 };
 
-const mockReviews: MockReview[] = [
-  {
-    id: 'r1',
-    profileName: 'Profile Name',
-    date: 'Reviewed on Feb 6, 2026',
-    rating: '3.9/5',
-    content:
-      'Too many people. Go when afternoon or evening time. Me do not know why',
-    badges: ['Heritage Explorer', 'Hotel Connoisseur']
-  },
-  {
-    id: 'r2',
-    profileName: 'Profile Name',
-    date: 'Reviewed on Feb 6, 2026',
-    rating: '3.9/5',
-    content:
-      'Too many people. Go when afternoon or evening time. Me do not know why',
-    badges: ['Heritage Explorer', 'Hotel Connoisseur']
-  },
-  {
-    id: 'r3',
-    profileName: 'Profile Name',
-    date: 'Reviewed on Feb 6, 2026',
-    rating: '3.9/5',
-    content:
-      'Too many people. Go when afternoon or evening time. Me do not know why',
-    badges: ['Heritage Explorer', 'Hotel Connoisseur']
+type DetailTab = 'description' | 'reviews' | 'location';
+
+// Helper to format 24h 'HH:mm' to 12h format
+function formatTime12Hour(timeStr: string | null) {
+  if (!timeStr) return '';
+  const [hourStr, minuteStr] = timeStr.split(':');
+  const hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minuteStr} ${ampm}`;
+}
+
+// Helper to get today's operating status
+function getCurrentStatus(hours: POIWithRelations['operatingHours']) {
+  if (!hours || hours.length === 0) return null;
+  
+  const today = new Date().getDay();
+  const todayHours = hours.find(h => h.dayOfWeek === today);
+  
+  if (!todayHours) return null;
+  
+  if (todayHours.isClosed) {
+    return { label: 'Closed', badgeClass: 'bg-red-100 text-red-700', isClosed: true };
   }
-];
+  
+  if (todayHours.is24Hours) {
+    return { label: 'Open 24/7', badgeClass: 'bg-green-100 text-green-700', isClosed: false };
+  }
+  
+  if (todayHours.openTime && todayHours.closeTime) {
+    const open = formatTime12Hour(todayHours.openTime);
+    const close = formatTime12Hour(todayHours.closeTime);
+    return { label: `Open ${open} - ${close}`, badgeClass: 'bg-emerald-100 text-emerald-700', isClosed: false };
+  }
+  
+  return null;
+}
+
+
 
 type PoiDetailsOverlayProps = {
-  poi: POI;
+  poi: POIWithRelations;
   copied: boolean;
   onClose: () => void;
   onCopyShareUrl: () => void;
   portalContainer?: HTMLElement | null;
-  /** When true the collapsed overlay renders as a right-side panel instead of
-   * filling its parent. Use this when MapArea occupies the full viewport. */
   panelMode?: boolean;
 };
 
@@ -109,14 +154,15 @@ export default function PoiDetailsOverlay({
     if (galleryImages.length === 0) {
       return;
     }
-
     setIsGalleryOpen(true);
   };
 
+  // Format the address beautifully, dropping null values gracefully
   const detailAddress = useMemo(() => {
     const parts = [
+      poi.address?.street,
       poi.address?.barangay,
-      poi.address?.cityMunicipality,
+      poi.address?.city,
       poi.address?.province,
       'Philippines'
     ].filter(Boolean);
@@ -129,6 +175,18 @@ export default function PoiDetailsOverlay({
   }, [poi]);
 
   const focusedCenter: [number, number] = [poi.longitude, poi.latitude];
+
+  const meaningfulOperatingHours = useMemo(
+    () =>
+      (poi.operatingHours ?? []).filter(record => {
+        const hasOpenTime = Boolean(record.openTime && record.openTime.trim().length > 0);
+        const hasCloseTime = Boolean(record.closeTime && record.closeTime.trim().length > 0);
+        return record.isClosed || record.is24Hours || hasOpenTime || hasCloseTime;
+      }),
+    [poi.operatingHours]
+  );
+
+  const currentStatus = useMemo(() => getCurrentStatus(poi.operatingHours), [poi.operatingHours]);
 
   const overlayContent = (
     <div
@@ -208,7 +266,7 @@ export default function PoiDetailsOverlay({
           <div className='mt-3 flex flex-wrap items-center gap-2 text-sm'>
             <span className='border-foreground/40 inline-flex items-center gap-1 rounded-full border px-2.5 py-1'>
               <Star className='h-3.5 w-3.5 fill-current' /> 4.6 •{' '}
-              {poi.vouchCount} reviews
+              {poi.vouchCount ?? 0} reviews
             </span>
             <span className='text-muted-foreground'>{detailAddress}</span>
             {copied && <span className='text-emerald-600'>Link copied</span>}
@@ -349,80 +407,126 @@ export default function PoiDetailsOverlay({
 
         {activeTab === 'description' && (
           <div className='mt-4 space-y-5'>
-            <TextBody className='text-foreground/90 leading-relaxed'>
-              {poi.description ||
-                'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.'}
+            <TextBody className='text-foreground/90 leading-relaxed whitespace-pre-line'>
+              {poi.description || 'No description available for this location.'}
             </TextBody>
 
-            <div className='grid gap-4 border-y py-5 md:grid-cols-3'>
+            <div className='grid gap-4 border-y py-5 md:grid-cols-2 lg:grid-cols-3'>
+              {/* Address Block */}
               <div>
                 <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
                   <MapPin className='h-4 w-4' /> Address
                 </TextBody>
                 <TextBody className='text-foreground/80 mt-1 whitespace-pre-line'>
-                  {`${poi.address?.street || 'P5 Rawis'}\n${poi.address?.cityMunicipality || 'Legazpi City'}\n${poi.address?.province || 'Albay'}\nPhilippines`}
+                  {[
+                    poi.address?.street,
+                    poi.address?.barangay,
+                    poi.address?.city,
+                    poi.address?.province,
+                    'Philippines'
+                  ].filter(Boolean).join('\n')}
                 </TextBody>
               </div>
 
-              <div className='space-y-2'>
-                <div>
-                  <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                    <ExternalLink className='h-4 w-4' /> Website
-                  </TextBody>
-                  <TextBody className='text-foreground/80 mt-1'>
-                    www.example.com
-                  </TextBody>
-                </div>
-                <div>
-                  <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                    <Phone className='h-4 w-4' /> Phone
-                  </TextBody>
-                  <TextBody className='text-foreground/80 mt-1'>
-                    +69 999 999 9999
-                  </TextBody>
-                </div>
+              {/* Contact / Links Block */}
+              <div className='space-y-3'>
+                {poi.phoneNumber && (
+                  <div>
+                    <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
+                      <Phone className='h-4 w-4' /> Phone
+                    </TextBody>
+                    <TextBody className='text-foreground/80 mt-1'>
+                      {poi.phoneNumber}
+                    </TextBody>
+                  </div>
+                )}
+                
+                {poi.email && (
+                  <div>
+                    <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
+                      <Mail className='h-4 w-4' /> Email
+                    </TextBody>
+                    <TextBody className='text-foreground/80 mt-1'>
+                      <a href={`mailto:${poi.email}`} className="hover:underline">
+                        {poi.email}
+                      </a>
+                    </TextBody>
+                  </div>
+                )}
+
+                {poi.links && poi.links.length > 0 && (
+                  <div className='space-y-2'>
+                    {poi.links.map((link, idx) => (
+                      <div key={idx}>
+                        <TextBody className='text-foreground font-semibold'>
+                          {link.label}
+                        </TextBody>
+                        <TextBody className='text-foreground/80 mt-1'>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 text-primary-600">
+                            {link.url.replace(/^https?:\/\//, '')} <ExternalLink className='h-3 w-3' />
+                          </a>
+                        </TextBody>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                  Operating Hours
-                </TextBody>
-                {(() => {
-                  const status = getPOIStatus(poi.operatingHours ?? []);
-                  return (
-                    <>
-                      <TextBody
-                        className='mt-1 font-semibold'
-                        style={{ color: status.color }}
-                      >
-                        {status.status}
-                      </TextBody>
-                      <TextBody className='text-foreground/70 text-xs'>
-                        {status.message}
-                      </TextBody>
-                      {poi.operatingHours && poi.operatingHours.length > 0 && (
-                        <div className='mt-2 space-y-0.5'>
-                          {[...poi.operatingHours]
-                            .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-                            .map(record => (
-                              <div
-                                key={record.id}
-                                className='flex items-center justify-between gap-2 text-xs'
-                              >
-                                <span className='text-foreground/60 w-8 shrink-0'>
-                                  {getDayLabel(record.dayOfWeek)}
-                                </span>
-                                <span className='text-foreground/80'>
-                                  {formatSchedule(record)}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
+              {/* Operating Hours Block */}
+              {meaningfulOperatingHours.length > 0 && (
+                <div>
+                  <TextBody className='text-foreground flex items-center gap-2 font-semibold mb-2'>
+                    Operating Hours
+                  </TextBody>
+                  
+                  {currentStatus ? (
+                    <div className='mb-3'>
+                      <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold', currentStatus.badgeClass)}>
+                        {currentStatus.label}
+                      </span>
+                    </div>
+                  ) : (
+                    <TextBody className='text-foreground/70 text-sm italic mb-2'>
+                      Hours not available
+                    </TextBody>
+                  )}
+
+                  <div className='mt-2 space-y-1'>
+                    {[...meaningfulOperatingHours]
+                      .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+                      .map((record, idx) => {
+                        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        const dayName = dayNames[record.dayOfWeek];
+                        
+                        let displayHours = '';
+                        if (record.isClosed) displayHours = 'Closed';
+                        else if (record.is24Hours) displayHours = 'Open 24 hours';
+                        else if (record.openTime && record.closeTime) {
+                          displayHours = `${formatTime12Hour(record.openTime)} - ${formatTime12Hour(record.closeTime)}`;
+                        } else {
+                          displayHours = 'Hours not set';
+                        }
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              'flex items-center justify-between gap-2 text-xs',
+                              record.dayOfWeek === new Date().getDay() ? 'font-bold text-foreground' : 'text-foreground/80'
+                            )}
+                          >
+                            <span className='w-8 shrink-0'>
+                              {dayName}
+                            </span>
+                            <span>
+                              {displayHours}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className='space-y-2'>
@@ -434,7 +538,7 @@ export default function PoiDetailsOverlay({
               </TextBody>
               <div className='h-64 overflow-hidden rounded-xl'>
                 <PoiMapCanvas
-                  pois={[poi]}
+                  pois={[poi as any]}
                   center={focusedCenter}
                   zoom={14}
                   selectedPoiId={poi.id}
@@ -457,43 +561,53 @@ export default function PoiDetailsOverlay({
             </div>
 
             <div className='space-y-4'>
-              {mockReviews.map(review => (
-                <article key={review.id} className='border-b pb-4'>
-                  <div className='flex items-start justify-between'>
-                    <div className='flex items-center gap-3'>
-                      <div className='bg-muted h-12 w-12 rounded-full' />
-                      <div>
-                        <p className='font-semibold'>{review.profileName}</p>
-                        <p className='text-muted-foreground text-sm'>
-                          {review.date}
+              {poi.reviews && poi.reviews.length > 0 ? (
+                poi.reviews.map(review => {
+                  const fullName = [review.user?.firstName, review.user?.lastName].filter(Boolean).join(' ') || review.user?.name || 'Anonymous User';
+                  const dateStr = new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                  
+                  return (
+                    <article key={review.id} className='border-b pb-4'>
+                      <div className='flex items-start justify-between'>
+                        <div className='flex items-center gap-3'>
+                          {review.user?.avatarUrl ? (
+                            <img src={review.user.avatarUrl} alt={fullName} className='bg-muted h-12 w-12 rounded-full object-cover' />
+                          ) : (
+                            <div className='bg-muted h-12 w-12 rounded-full flex items-center justify-center font-bold text-muted-foreground'>
+                              {fullName.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <p className='font-semibold'>{fullName}</p>
+                            <p className='text-muted-foreground text-sm'>
+                              Reviewed on {dateStr}
+                            </p>
+                          </div>
+                        </div>
+                        <p className='font-medium flex items-center gap-1'>
+                          {review.rating}/5 <Star className='h-3 w-3 fill-current text-primary-500' />
                         </p>
                       </div>
-                    </div>
-                    <p className='font-medium'>{review.rating}</p>
-                  </div>
 
-                  <p className='mt-3 text-sm'>{review.content}</p>
-
-                  <div className='mt-3 flex flex-wrap gap-2'>
-                    {review.badges.map((badge, idx) => (
-                      <span
-                        key={`${review.id}-${badge}`}
-                        className={`rounded-full px-2.5 py-0.5 text-xs text-white ${idx === 0 ? 'bg-sky-500' : 'bg-emerald-700'}`}
-                      >
-                        {badge}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
+                      <p className='mt-3 text-sm whitespace-pre-line'>{review.content}</p>
+                    </article>
+                  );
+                })
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p>No reviews yet. Be the first to share your experience!</p>
+                </div>
+              )}
             </div>
 
-            <button
-              type='button'
-              className='border-foreground/40 text-foreground mt-5 rounded-full border px-4 py-1.5 text-sm'
-            >
-              Show all 69K reviews
-            </button>
+            {poi.reviews && poi.reviews.length > 0 && (
+              <button
+                type='button'
+                className='border-foreground/40 text-foreground mt-5 rounded-full border px-4 py-1.5 text-sm'
+              >
+                Show all {poi.reviews.length} reviews
+              </button>
+            )}
           </div>
         )}
 
@@ -505,7 +619,7 @@ export default function PoiDetailsOverlay({
             <TextBody className='text-foreground/80'>{detailAddress}</TextBody>
             <div className='h-72 overflow-hidden rounded-xl'>
               <PoiMapCanvas
-                pois={[poi]}
+                pois={[poi as any]}
                 center={focusedCenter}
                 zoom={15}
                 selectedPoiId={poi.id}
@@ -519,7 +633,7 @@ export default function PoiDetailsOverlay({
       <PoiFullscreenGallery
         isOpen={isGalleryOpen}
         title={`${poi.name}`}
-        images={galleryImages}
+        images={galleryImages.map(g => ({ id: g.id, imageUrl: g.imageUrl }))}
         onClose={() => setIsGalleryOpen(false)}
         onShare={onCopyShareUrl}
       />

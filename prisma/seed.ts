@@ -1,40 +1,60 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { PrismaClient } from '../lib/generated/prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { findTagSeedByName, POI_TAG_CLUSTERS } from '../lib/poi-tag-taxonomy';
 
-const connectionString = process.env.DATABASE_URL!;
+const CONTACTS_AND_DESC_FILE = 'POI-Legazpi - ContactsANDDescp.csv';
+const WEBSITES_FILE = 'POI-Legazpi - Website.csv';
+
+loadEnvironmentVariables();
+
+const connectionString = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+
+if (!connectionString) {
+    throw new Error('DATABASE_URL or DIRECT_URL is not set.');
+}
+
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const CSV_COLUMN_INDEX = {
-    poiName: 0,
-    latitude: 4,
-    longitude: 5,
-    tag: 6,
-    cityMunicipality: 8,
-    province: 9,
-    street: 10,
-    barangay: 11,
-    postalCode: 12,
-} as const;
+type ContactsAndDescCsvRow = {
+    id?: string;
+    phoneNumber?: string;
+    email?: string;
+    Description?: string;
+};
 
-type CsvRow = string[];
+type WebsiteCsvRow = {
+    poiId?: string;
+    label?: string;
+    url?: string;
+};
 
-function getCell(row: CsvRow, index: number): string | undefined {
-    const value = row[index]?.trim();
-    return value ? value : undefined;
+type NotFoundError = {
+    code?: string;
+};
+
+function loadEnvironmentVariables(): void {
+    const candidates = [
+        path.resolve(process.cwd(), '.env'),
+        path.resolve(process.cwd(), '..', '.env'),
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            dotenv.config({ path: candidate, override: false });
+        }
+    }
 }
 
-function resolveCsvPath(): string {
+function resolveCsvPath(fileName: string): string {
     const candidates = [
-        path.resolve(process.cwd(), 'POI-Legazpi.csv'),
-        path.resolve(process.cwd(), '..', 'POI-Legazpi.csv'),
+        path.resolve(process.cwd(), fileName),
+        path.resolve(process.cwd(), '..', fileName),
     ];
 
     for (const candidate of candidates) {
@@ -44,165 +64,216 @@ function resolveCsvPath(): string {
     }
 
     throw new Error(
-        `Could not find POI-Legazpi.csv. Checked: ${candidates.join(', ')}`
+        `Could not find ${fileName}. Checked: ${candidates.join(', ')}`
     );
 }
 
-async function main() {
-    console.log('Seeding POIs from POI-Legazpi.csv...');
+async function readCsvRows<T>(fileName: string): Promise<T[]> {
+    const csvPath = resolveCsvPath(fileName);
+    const fileContent = await fs.promises.readFile(csvPath, { encoding: 'utf-8' });
 
-    const csvFilePath = resolveCsvPath();
-    const fileContent = fs.readFileSync(csvFilePath, { encoding: 'utf-8' });
-
-    const rows = parse(fileContent, {
-        columns: false,
+    return parse(fileContent, {
+        columns: true,
         skip_empty_lines: true,
         delimiter: ',',
         trim: true,
         bom: true,
-    }) as CsvRow[];
+    }) as T[];
+}
 
-    if (rows.length <= 1) {
-        throw new Error('CSV has no data rows to seed.');
+function normalizeNullableCell(value: string | undefined): string | null {
+    if (!value) {
+        return null;
     }
 
-    const dataRows = rows.slice(1);
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
 
-    console.log('Clearing existing POI data...');
-    await prisma.pOI.deleteMany();
-    await prisma.pOITag.deleteMany();
-    await prisma.pOITagCluster.deleteMany();
+function isRecordNotFoundError(error: unknown): boolean {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as NotFoundError).code === 'P2025'
+    );
+}
 
-    for (const clusterData of POI_TAG_CLUSTERS) {
-        await prisma.pOITagCluster.create({
-            data: {
-                id: clusterData.id,
-                name: clusterData.name,
-                iconName: clusterData.iconName,
-            },
-        });
+async function seedContactsAndDescriptions(): Promise<void> {
+    console.log(`Updating POI contact and description fields from ${CONTACTS_AND_DESC_FILE}...`);
 
-        for (const tagData of clusterData.tags) {
-            await prisma.pOITag.create({
-                data: {
-                    id: tagData.id,
-                    name: tagData.name,
-                    iconName: tagData.iconName,
-                    clusterId: tagData.clusterId,
-                },
-            });
+    const rows = await readCsvRows<ContactsAndDescCsvRow>(CONTACTS_AND_DESC_FILE);
+
+    if (rows.length === 0) {
+        console.warn('Contacts/description CSV has no rows to process.');
+        return;
+    }
+
+    let updated = 0;
+    let skippedInvalidRows = 0;
+    let notFound = 0;
+
+    for (const [index, row] of rows.entries()) {
+        const poiId = normalizeNullableCell(row.id);
+
+        if (!poiId) {
+            skippedInvalidRows += 1;
+            console.warn(`POI contacts: skipping row ${index + 2} due to missing id.`);
+            continue;
         }
+
+        const phoneNumber = normalizeNullableCell(row.phoneNumber);
+        const email = normalizeNullableCell(row.email);
+        const description = normalizeNullableCell(row.Description);
+
+        const data: {
+            phoneNumber: string | null;
+            email: string | null;
+            description?: string;
+        } = {
+            phoneNumber,
+            email,
+        };
+
+        if (description !== null) {
+            data.description = description;
+        }
+
+        try {
+            await prisma.pOI.update({
+                where: { id: poiId },
+                data,
+            });
+            updated += 1;
+        } catch (error) {
+            if (isRecordNotFoundError(error)) {
+                notFound += 1;
+                console.warn(`POI contacts: row ${index + 2} references missing POI id ${poiId}.`);
+                continue;
+            }
+
+            throw error;
+        }
+    }
+
+    console.log(
+        `POI contacts/descriptions done. Updated: ${updated}, Missing POIs: ${notFound}, Skipped invalid rows: ${skippedInvalidRows}`
+    );
+}
+
+async function seedPoiLinks(): Promise<void> {
+    console.log(`Inserting POI links from ${WEBSITES_FILE}...`);
+
+    const rows = await readCsvRows<WebsiteCsvRow>(WEBSITES_FILE);
+
+    if (rows.length === 0) {
+        console.warn('Website CSV has no rows to process.');
+        return;
+    }
+
+    const normalizedRows = rows
+        .map((row, index) => ({
+            rowNumber: index + 2,
+            poiId: normalizeNullableCell(row.poiId),
+            label: normalizeNullableCell(row.label),
+            url: normalizeNullableCell(row.url),
+        }));
+
+    let skippedInvalidRows = 0;
+    const validRows: Array<{ poiId: string; label: string; url: string }> = [];
+
+    for (const row of normalizedRows) {
+        if (!row.poiId || !row.label || !row.url) {
+            skippedInvalidRows += 1;
+            continue;
+        }
+
+        validRows.push({
+            poiId: row.poiId,
+            label: row.label,
+            url: row.url,
+        });
+    }
+
+    if (validRows.length === 0) {
+        console.warn('No valid website rows found after cleanup.');
+        return;
+    }
+
+    const poiIds = Array.from(new Set(validRows.map((row) => row.poiId)));
+    const existingPois = await prisma.pOI.findMany({
+        where: {
+            id: {
+                in: poiIds,
+            },
+        },
+        select: {
+            id: true,
+        },
+    });
+
+    const existingPoiIds = new Set(existingPois.map((poi) => poi.id));
+
+    const existingLinks = await prisma.pOILink.findMany({
+        where: {
+            poiId: {
+                in: Array.from(existingPoiIds),
+            },
+        },
+        select: {
+            poiId: true,
+            label: true,
+            url: true,
+        },
+    });
+
+    const existingKeys = new Set(
+        existingLinks.map((link) => `${link.poiId}::${link.label}::${link.url}`)
+    );
+
+    const seenKeys = new Set<string>();
+    const createData: Array<{ poiId: string; label: string; url: string }> = [];
+    let skippedMissingPois = 0;
+
+    for (const row of validRows) {
+        if (!existingPoiIds.has(row.poiId)) {
+            skippedMissingPois += 1;
+            continue;
+        }
+
+        const key = `${row.poiId}::${row.label}::${row.url}`;
+        if (existingKeys.has(key) || seenKeys.has(key)) {
+            continue;
+        }
+
+        seenKeys.add(key);
+        createData.push(row);
     }
 
     let created = 0;
-    let skipped = 0;
-
-    for (const [rowIndex, row] of dataRows.entries()) {
-        const poiName = getCell(row, CSV_COLUMN_INDEX.poiName);
-        const latitudeRaw = getCell(row, CSV_COLUMN_INDEX.latitude);
-        const longitudeRaw = getCell(row, CSV_COLUMN_INDEX.longitude);
-
-        if (!poiName || !latitudeRaw || !longitudeRaw) {
-            skipped += 1;
-            console.warn(`Skipping row ${rowIndex + 2}: missing POI name or coordinates.`);
-            continue;
-        }
-
-        const latitude = Number.parseFloat(latitudeRaw);
-        const longitude = Number.parseFloat(longitudeRaw);
-
-        if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-            skipped += 1;
-            console.warn(`Skipping row ${rowIndex + 2}: invalid coordinates.`);
-            continue;
-        }
-
-        const rawTag = getCell(row, CSV_COLUMN_INDEX.tag);
-        const mappedTag = findTagSeedByName(rawTag);
-        const tagId = mappedTag?.id ?? rawTag;
-        const street = getCell(row, CSV_COLUMN_INDEX.street);
-        const barangay = getCell(row, CSV_COLUMN_INDEX.barangay);
-        const cityMunicipality = getCell(row, CSV_COLUMN_INDEX.cityMunicipality);
-        const province = getCell(row, CSV_COLUMN_INDEX.province);
-        const postalCode = getCell(row, CSV_COLUMN_INDEX.postalCode);
-
-        if (tagId) {
-            await prisma.pOITag.upsert({
-                where: { id: tagId },
-                update: mappedTag
-                    ? {
-                          name: mappedTag.name,
-                          iconName: mappedTag.iconName,
-                          clusterId: mappedTag.clusterId,
-                      }
-                    : {
-                          name: tagId,
-                      },
-                create: mappedTag
-                    ? {
-                          id: mappedTag.id,
-                          name: mappedTag.name,
-                          iconName: mappedTag.iconName,
-                          clusterId: mappedTag.clusterId,
-                      }
-                    : {
-                          id: tagId,
-                          name: tagId,
-                      },
-            });
-        }
-
-        const hasAddress = [street, barangay, cityMunicipality, province, postalCode].some(
-            (value) => Boolean(value)
-        );
-
-        const poi = await prisma.pOI.create({
-            data: {
-                name: poiName,
-                description: `Autogenerated seed description for ${poiName}.`,
-                latitude,
-                longitude,
-                primaryTagId: tagId,
-                tags: tagId
-                    ? {
-                            connect: [
-                                {
-                                    id: tagId,
-                                },
-                            ],
-                        }
-                    : undefined,
-                address: hasAddress
-                    ? {
-                            create: {
-                                street,
-                                barangay,
-                                cityMunicipality,
-                                province,
-                                postalCode,
-                            },
-                        }
-                    : undefined,
-            },
-            include: {
-                tags: true,
-                address: true,
-            },
+    if (createData.length > 0) {
+        const result = await prisma.pOILink.createMany({
+            data: createData,
         });
-
-        created += 1;
-        const tagNames = poi.tags.map((item) => item.name).join(', ');
-        console.log(
-            `Created POI: ${poi.name} | Primary Tag: ${poi.primaryTagId ?? 'none'} | Tags: ${tagNames || 'none'} | Address: ${poi.address ? 'yes' : 'no'}`
-        );
+        created = result.count;
     }
 
-    console.log(`Seeding completed successfully. Created: ${created}, Skipped: ${skipped}`);
+    console.log(
+        `POI links done. Created: ${created}, Skipped invalid rows: ${skippedInvalidRows}, Skipped missing POIs: ${skippedMissingPois}`
+    );
+}
+
+async function main(): Promise<void> {
+    console.log('Starting seed import for contacts/descriptions and POI links...');
+
+    await seedContactsAndDescriptions();
+    await seedPoiLinks();
+
+    console.log('Seed import completed successfully.');
 }
 
 main()
-    .catch((e) => {
-        console.error(e);
+    .catch((error) => {
+        console.error('Seed failed:', error);
         process.exit(1);
     })
     .finally(async () => {

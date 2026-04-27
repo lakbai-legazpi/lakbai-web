@@ -23,6 +23,22 @@ export async function GET(
                 galleries: true,
                 address: true,
                 operatingHours: true,
+                links: true,
+                reviews: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                firstName: true,
+                                lastName: true,
+                                avatarUrl: true,
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                }
             }
         });
 

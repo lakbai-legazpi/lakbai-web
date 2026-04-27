@@ -27,13 +27,13 @@ function getSocialHandle(value: string): string {
   }
 }
 
-function getInitials(firstName: string | null, lastName: string | null, username: string): string {
+function getInitials(firstName: string | null, lastName: string | null, username: string | null): string {
   const firstInitial = firstName?.trim().charAt(0) ?? '';
   const lastInitial = lastName?.trim().charAt(0) ?? '';
   const initials = `${firstInitial}${lastInitial}`.toUpperCase();
   if (initials.length > 0) return initials;
 
-  return username.slice(0, 2).toUpperCase();
+  return (username || '').slice(0, 2).toUpperCase();
 }
 
 export default async function PublicProfilePage({ params }: ProfilePageProps) {
@@ -156,10 +156,10 @@ export default async function PublicProfilePage({ params }: ProfilePageProps) {
             </div>
 
             {isOwnProfile ? (
-              <ProfileActionsMenu username={profile.username} />
+              <ProfileActionsMenu username={profile.username || ''} />
             ) : (
               <Link
-                href={`/profile/${profile.username}`}
+                href={`/profile/${profile.username || ''}`}
                 className='text-text-muted hover:text-text-main self-end text-sm underline sm:self-start'
               >
                 Profile link
