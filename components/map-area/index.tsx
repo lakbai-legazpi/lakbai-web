@@ -155,6 +155,10 @@ export default function MapArea({
               galleries: p.galleries || [],
               address: p.address || null,
               operatingHours: p.operatingHours || [],
+              phoneNumber: p.phoneNumber ?? null,
+              email: p.email ?? null,
+              links: p.links || [],
+              reviews: p.reviews || [],
             });
             setSelectedPoiId(poiFromUrl);
           } else {

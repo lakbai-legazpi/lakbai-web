@@ -16,6 +16,25 @@ export type POIGallery = {
   imageUrl: string;
 };
 
+export type POILink = {
+  id: string;
+  label: string;
+  url: string;
+};
+
+export type POIReview = {
+  id: string;
+  rating: number;
+  content: string;
+  createdAt: string | Date;
+  user: {
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    avatarUrl: string | null;
+  };
+};
+
 export type POIAddress = {
   street?: string | null;
   barangay?: string | null;
@@ -39,11 +58,15 @@ export type POI = {
   description: string;
   latitude: number;
   longitude: number;
+  phoneNumber?: string | null;
+  email?: string | null;
   vouchCount: number;
   primaryTagId?: string | null;
   tags: POITag[];
   galleries: POIGallery[];
   address?: POIAddress | null;
   operatingHours: OperatingHours[];
+  links: POILink[];
+  reviews: POIReview[];
 };
 

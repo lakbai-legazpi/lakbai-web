@@ -24,6 +24,10 @@ function normalizePoi(poi: Partial<POI>): POI {
     galleries: poi.galleries ?? [],
     address: poi.address ?? null,
     operatingHours: poi.operatingHours ?? [],
+    phoneNumber: (poi as any).phoneNumber ?? null,
+    email: (poi as any).email ?? null,
+    links: (poi as any).links ?? [],
+    reviews: (poi as any).reviews ?? [],
   };
 }
 

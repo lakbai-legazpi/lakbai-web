@@ -188,6 +188,17 @@ export default function PoiDetailsOverlay({
 
   const currentStatus = useMemo(() => getCurrentStatus(poi.operatingHours), [poi.operatingHours]);
 
+  const { averageRating, reviewCount } = useMemo(() => {
+    const reviews = poi.reviews || [];
+    if (reviews.length === 0) return { averageRating: 0, reviewCount: 0 };
+    
+    const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
+    return { 
+      averageRating: (sum / reviews.length).toFixed(1), 
+      reviewCount: reviews.length 
+    };
+  }, [poi.reviews]);
+
   const overlayContent = (
     <div
       className={cn(
@@ -265,8 +276,8 @@ export default function PoiDetailsOverlay({
 
           <div className='mt-3 flex flex-wrap items-center gap-2 text-sm'>
             <span className='border-foreground/40 inline-flex items-center gap-1 rounded-full border px-2.5 py-1'>
-              <Star className='h-3.5 w-3.5 fill-current' /> 4.6 •{' '}
-              {poi.vouchCount ?? 0} reviews
+              <Star className='h-3.5 w-3.5 fill-current text-primary-500' /> {reviewCount > 0 ? averageRating : 'New'} •{' '}
+              {reviewCount} reviews
             </span>
             <span className='text-muted-foreground'>{detailAddress}</span>
             {copied && <span className='text-emerald-600'>Link copied</span>}
@@ -413,11 +424,11 @@ export default function PoiDetailsOverlay({
 
             <div className='grid gap-4 border-y py-5 md:grid-cols-2 lg:grid-cols-3'>
               {/* Address Block */}
-              <div>
+              <div className='min-w-0'>
                 <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                  <MapPin className='h-4 w-4' /> Address
+                  <MapPin className='h-4 w-4 shrink-0' /> Address
                 </TextBody>
-                <TextBody className='text-foreground/80 mt-1 whitespace-pre-line'>
+                <TextBody className='text-foreground/80 mt-1 whitespace-pre-line break-words'>
                   {[
                     poi.address?.street,
                     poi.address?.barangay,
@@ -429,13 +440,13 @@ export default function PoiDetailsOverlay({
               </div>
 
               {/* Contact / Links Block */}
-              <div className='space-y-3'>
+              <div className='space-y-3 min-w-0'>
                 {poi.phoneNumber && (
                   <div>
                     <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                      <Phone className='h-4 w-4' /> Phone
+                      <Phone className='h-4 w-4 shrink-0' /> Phone
                     </TextBody>
-                    <TextBody className='text-foreground/80 mt-1'>
+                    <TextBody className='text-foreground/80 mt-1 break-words'>
                       {poi.phoneNumber}
                     </TextBody>
                   </div>
@@ -444,9 +455,9 @@ export default function PoiDetailsOverlay({
                 {poi.email && (
                   <div>
                     <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
-                      <Mail className='h-4 w-4' /> Email
+                      <Mail className='h-4 w-4 shrink-0' /> Email
                     </TextBody>
-                    <TextBody className='text-foreground/80 mt-1'>
+                    <TextBody className='text-foreground/80 mt-1 break-all'>
                       <a href={`mailto:${poi.email}`} className="hover:underline">
                         {poi.email}
                       </a>
@@ -458,12 +469,13 @@ export default function PoiDetailsOverlay({
                   <div className='space-y-2'>
                     {poi.links.map((link, idx) => (
                       <div key={idx}>
-                        <TextBody className='text-foreground font-semibold'>
+                        <TextBody className='text-foreground font-semibold break-words'>
                           {link.label}
                         </TextBody>
-                        <TextBody className='text-foreground/80 mt-1'>
-                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 text-primary-600">
-                            {link.url.replace(/^https?:\/\//, '')} <ExternalLink className='h-3 w-3' />
+                        <TextBody className='text-foreground/80 mt-1 break-all'>
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-start gap-1 text-primary-600">
+                            <span className="break-all">{link.url.replace(/^https?:\/\//, '')}</span>
+                            <ExternalLink className='h-3 w-3 shrink-0 mt-1' />
                           </a>
                         </TextBody>
                       </div>
@@ -474,7 +486,7 @@ export default function PoiDetailsOverlay({
 
               {/* Operating Hours Block */}
               {meaningfulOperatingHours.length > 0 && (
-                <div>
+                <div className='min-w-0'>
                   <TextBody className='text-foreground flex items-center gap-2 font-semibold mb-2'>
                     Operating Hours
                   </TextBody>
