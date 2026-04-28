@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       firstName: metadataFirstName ?? null,
       lastName: metadataLastName ?? null,
       username: resolvedUsername,
-      avatarUrl: user.user_metadata?.avatar_url ?? null,
+      ...(user.user_metadata?.avatar_url && { avatarUrl: user.user_metadata.avatar_url }),
     },
   });
 
