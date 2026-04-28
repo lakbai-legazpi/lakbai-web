@@ -42,7 +42,6 @@
     "eslint-config-next": "^16.2.4",
     "prettier-plugin-tailwindcss": "^0.7.3",
     "prisma": "^7.8.0",
-    "shadcn": "^4.4.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
