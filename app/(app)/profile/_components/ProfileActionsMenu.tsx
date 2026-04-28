@@ -41,7 +41,7 @@ export function ProfileActionsMenu({ username }: ProfileActionsMenuProps) {
       </button>
 
       {isOpen && (
-        <div className='bg-background border-border absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border py-1 shadow-lg'>
+        <div className='bg-background border-border absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-44 overflow-hidden rounded-xl border py-1 shadow-lg'>
           <Link
             href='/profile/settings'
             onClick={() => setIsOpen(false)}
@@ -52,7 +52,7 @@ export function ProfileActionsMenu({ username }: ProfileActionsMenuProps) {
           <button
             type='button'
             onClick={handleCopyLink}
-            className='text-text-main hover:bg-surface-light block w-full px-4 py-2 text-left text-sm'
+            className='text-text-main hover:bg-surface-light block w-full px-4 py-2 text-sm'
           >
             Copy link
           </button>

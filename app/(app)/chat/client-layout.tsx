@@ -48,12 +48,8 @@ export default function ChatClientLayout({
     }
   }, [chatId, initialChats, router]);
 
-  // We can open the global NewJourneyModal if the user clicks "Plan a New Journey" natively
   const triggerNewJourneyModal = () => {
-    // The `<GlobalChatbarWrapper>` manages the modal globally now.
-    // Wait, the new journey modal in GlobalChatbar is attached to the GlobalChatbar itself.
-    // To trigger it from Chatbox, we can dispatch a custom event.
-    window.dispatchEvent(new CustomEvent('open-new-journey-modal'));
+    window.dispatchEvent(new CustomEvent('open-new-journey-modal', { detail: { chatId } }));
   };
 
   return (

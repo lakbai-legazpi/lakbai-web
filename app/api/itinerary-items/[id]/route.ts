@@ -105,3 +105,37 @@ export async function PATCH(
     );
   }
 }
+
+// DELETE /api/itinerary-items/[id]
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    if (!id?.trim()) {
+      return NextResponse.json({ error: 'Missing itineraryItemId.' }, { status: 400 });
+    }
+
+    const existingItem = await prisma.itineraryItem.findUnique({
+      where: { id }
+    });
+
+    if (!existingItem) {
+      return NextResponse.json({ error: 'Itinerary item not found.' }, { status: 404 });
+    }
+
+    await prisma.itineraryItem.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete itinerary item', error);
+    return NextResponse.json(
+      { error: 'Failed to delete itinerary item.' },
+      { status: 500 }
+    );
+  }
+}

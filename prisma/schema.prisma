@@ -43,6 +43,7 @@ model User {
   vouches       POIVouch[]
   favorites     POIFavorite[]
   journeys      Journey[]
+  chats         Chat[]
   contributions Contribution[]
 
   createdAt DateTime @default(now())
@@ -214,19 +215,35 @@ model Journey {
   startDate       DateTime?
   endDate         DateTime?
   isFlexibleDates Boolean   @default(false)
+  flexibleDays    Int?
+  flexibleMonths  String?   // Stored as JSON string e.g. "['June', 'July']"
   companions      String?
   preferences     String?   @db.Text
   budget          Int?
 
   chats          Chat[]
   itineraryItems ItineraryItem[]
+  days           JourneyDay[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model JourneyDay {
+  id        String   @id @default(cuid())
+  journeyId String
+  journey   Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  dayNumber Int
+  title     String?
+
+  @@unique([journeyId, dayNumber])
+  @@index([journeyId])
+}
+
 model Chat {
   id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   journeyId String?
   journey   Journey? @relation(fields: [journeyId], references: [id], onDelete: Cascade)
   title     String

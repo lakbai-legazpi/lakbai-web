@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Chatbar from '../chat/_components/chatbar';
 import NewJourneyModal from './NewJourneyModal';
-import { createBlankChat, createJourneyChat } from '@/lib/chat-api';
+import { createBlankChat, createJourneyChat, linkJourneyToChat } from '@/lib/chat-api';
 
 export default function GlobalChatbarWrapper({ 
   initialChats, 
@@ -17,12 +17,16 @@ export default function GlobalChatbarWrapper({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const handleToggle = () => setIsOpen(prev => !prev);
     const handleClose = () => setIsOpen(false);
-    const handleOpenModal = () => setIsModalOpen(true);
+    const handleOpenModal = (e: any) => {
+      setActiveChatId(e?.detail?.chatId || null);
+      setIsModalOpen(true);
+    };
     window.addEventListener('toggle-chat-popup', handleToggle);
     window.addEventListener('close-chat-popup', handleClose);
     window.addEventListener('open-new-journey-modal', handleOpenModal);
@@ -43,12 +47,22 @@ export default function GlobalChatbarWrapper({
   };
 
   const handleModalSubmit = async (newJourneyData: any) => {
-    const result = await createJourneyChat(newJourneyData);
-    if (result) {
-      setIsOpen(false);
-      setIsModalOpen(false);
-      router.refresh();
-      router.push(`/chat/${result.chat.id}`);
+    if (activeChatId) {
+      const result = await linkJourneyToChat(activeChatId, newJourneyData);
+      if (result) {
+        setIsOpen(false);
+        setIsModalOpen(false);
+        window.dispatchEvent(new CustomEvent('journey-linked', { detail: result }));
+        router.refresh();
+      }
+    } else {
+      const result = await createJourneyChat(newJourneyData);
+      if (result) {
+        setIsOpen(false);
+        setIsModalOpen(false);
+        router.refresh();
+        router.push(`/chat/${result.chat.id}`);
+      }
     }
   };
 

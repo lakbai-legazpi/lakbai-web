@@ -19,7 +19,14 @@ import {
   LogOut
 } from 'lucide-react';
 
-export function Sidebar() {
+type UserProfile = {
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+};
+
+export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [collapsedMenuTop, setCollapsedMenuTop] = useState<number | null>(null);
@@ -403,7 +410,7 @@ export function Sidebar() {
                 >
                   <div className='flex flex-col items-start'>
                     <span className='text-text-main text-sm font-semibold'>
-                      profile name
+                      {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : 'User Profile'}
                     </span>
                     <span className='text-text-muted text-xs'>
                       View profile
@@ -480,10 +487,10 @@ export function Sidebar() {
               )}
             >
               <span className='text-text-main text-sm font-medium whitespace-nowrap'>
-                profile name
+                {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : 'User Profile'}
               </span>
               <span className='text-text-muted text-xs whitespace-nowrap'>
-                @profileexample
+                {userProfile?.username ? `@${userProfile.username}` : ''}
               </span>
             </div>
           </button>

@@ -52,6 +52,9 @@ function createInitialForm(): ContributionFormState {
   return {
     name: '',
     description: '',
+    primaryTagCluster: '',
+    primaryTagName: '',
+    primaryTagIcon: '',
     latitude: '',
     longitude: '',
     address: createInitialAddress(),
@@ -85,9 +88,17 @@ function mapPoiToForm(poi: POI): ContributionFormState {
     };
   });
 
+  const primaryTag = poi.tags?.find(t => t.id === poi.primaryTagId) || poi.tags?.[0];
+  const primaryIcon = primaryTag?.iconName ?? primaryTag?.cluster?.iconName ?? '';
+  const primaryTagName = primaryTag?.name ?? '';
+  const primaryTagCluster = primaryTag?.cluster?.name ?? '';
+
   return {
     name: poi.name,
     description: poi.description ?? '',
+    primaryTagCluster,
+    primaryTagName,
+    primaryTagIcon: primaryIcon,
     latitude: poi.latitude.toString(),
     longitude: poi.longitude.toString(),
     address: {
@@ -402,6 +413,9 @@ export default function ContributePage() {
     }
   };
 
+  const availableClusters = Array.from(new Set(pois.flatMap(poi => poi.tags.map(t => t.cluster?.name).filter(Boolean)))) as string[];
+  const availableTags = Array.from(new Set(pois.flatMap(poi => poi.tags.map(t => t.name).filter(Boolean)))) as string[];
+
   return (
     <div className='relative flex h-full w-full overflow-hidden'>
       <ContributionSidebar
@@ -414,6 +428,8 @@ export default function ContributePage() {
         submitStatus={submitStatus}
         errorMessage={errorMessage}
         isPinModeEnabled={isPinModeEnabled}
+        availableClusters={availableClusters}
+        availableTags={availableTags}
         onReset={handleReset}
         onSubmit={handleSubmit}
         onTogglePinMode={() => setIsPinModeEnabled(previousValue => !previousValue)}

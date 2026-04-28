@@ -19,6 +19,7 @@ import {
 
 import PoiMapCanvas from '@/components/map-area/PoiMapCanvas';
 import PoiFullscreenGallery from './PoiFullscreenGallery';
+import { PoiActionButtons } from './PoiActionButtons';
 import { getTagLabel, getTagVisual } from './get-tag-icon';
 import { TextHeading, TextBody } from '@/components/text';
 import { cn } from '@/lib/cn';
@@ -245,18 +246,11 @@ export default function PoiDetailsOverlay({
           </div>
 
           <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              className='border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm'
-            >
-              <Bookmark className='h-3.5 w-3.5' /> Favorite
-            </button>
-            <button
-              type='button'
-              className='border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm'
-            >
-              <PlusCircle className='h-3.5 w-3.5' /> Add to Journey
-            </button>
+            <PoiActionButtons 
+              poiId={poi.id}
+              initialVouchCount={poi.vouchCount ?? 0}
+              layout="compact"
+            />
             <button
               type='button'
               onClick={onCopyShareUrl}
@@ -642,13 +636,16 @@ export default function PoiDetailsOverlay({
         )}
       </div>
 
-      <PoiFullscreenGallery
-        isOpen={isGalleryOpen}
-        title={`${poi.name}`}
-        images={galleryImages.map(g => ({ id: g.id, imageUrl: g.imageUrl }))}
-        onClose={() => setIsGalleryOpen(false)}
-        onShare={onCopyShareUrl}
-      />
+      {isGalleryOpen && (
+        <PoiFullscreenGallery
+          isOpen={isGalleryOpen}
+          poiId={poi.id}
+          title={poi.name}
+          images={galleryImages}
+          onClose={() => setIsGalleryOpen(false)}
+          onShare={onCopyShareUrl}
+        />
+      )}
     </div>
   );
 

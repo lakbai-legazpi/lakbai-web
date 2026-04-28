@@ -2,28 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Bookmark, PlusCircle, Share } from 'lucide-react';
+import { X, Share2 } from 'lucide-react';
+import { PoiActionButtons } from './PoiActionButtons';
 
 import type { POIGallery } from '@/components/map-area/types';
 
 type PoiFullscreenGalleryProps = {
   isOpen: boolean;
+  poiId: string;
   title: string;
   images: POIGallery[];
   onClose: () => void;
   onShare?: () => void;
-  onSave?: () => void;
-  onAddToTrip?: () => void;
 };
 
 export default function PoiFullscreenGallery({
   isOpen,
+  poiId,
   title,
   images,
   onClose,
-  onShare,
-  onSave,
-  onAddToTrip
+  onShare
 }: PoiFullscreenGalleryProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -53,26 +52,19 @@ export default function PoiFullscreenGallery({
         </div>
 
         <div className='flex items-center gap-2'>
-          <button
-            type='button'
-            className='border-text-main bg-surface text-text-main hover:bg-text-main/10 inline-flex h-9 items-center gap-2 rounded-full border px-4 text-xs font-medium transition'
-            onClick={onSave}
-          >
-            <Bookmark className='h-3.5 w-3.5' /> Save
-          </button>
-          <button
-            type='button'
-            className='border-text-main text-text-main bg-surface hover:bg-text-main/10 inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-xs font-medium'
-          >
-            <PlusCircle className='h-3.5 w-3.5' /> Add to Journey
-          </button>
+          <PoiActionButtons 
+            poiId={poiId} 
+            initialVouchCount={0} 
+            layout="row" 
+            buttonClassName="h-9 border-text-main bg-surface text-text-main hover:bg-text-main/10"
+          />
           <button
             type='button'
             className='border-text-main text-text-main hover:bg-text-main/10 inline-flex h-9 w-9 items-center justify-center rounded-full border bg-transparent transition'
             onClick={onShare}
             title='Share'
           >
-            <Share className='text-text-main h-3.5 w-3.5' />
+            <Share2 className='h-4 w-4' />
           </button>
         </div>
       </div>

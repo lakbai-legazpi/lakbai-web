@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     const body = await request.json();
     const { message, chatId, journeyId, isNewContext, newJourneyData } = body;
 
@@ -41,7 +45,10 @@ Only output the raw JSON. Not wrapped in markdown blocks.
       if (body.isBlank) {
         // Create an untitled blank chat WITH NO JOURNEY
         chat = await prisma.chat.create({
-          data: { title: "Untitled Chat" }
+          data: { 
+            title: "Untitled Chat",
+            userId: user?.id ?? null
+          }
         });
         const initGreeting = "Hi! I'm your AI Travel Assistant. Where would you like to explore today?";
         await prisma.message.create({
@@ -79,6 +86,23 @@ Only output the raw JSON. Not wrapped in markdown blocks.
                   ? new Date(newJourneyData.dates.to)
                   : null,
               isFlexibleDates: newJourneyData.dates?.isFlexible || false,
+              flexibleDays: newJourneyData.dates?.isFlexible ? newJourneyData.dates.days : null,
+              flexibleMonths: newJourneyData.dates?.isFlexible && newJourneyData.dates.months 
+                ? JSON.stringify(newJourneyData.dates.months) 
+                : null,
+              userId: user?.id ?? null,
+              days: {
+                create: Array.from({ 
+                  length: newJourneyData.dates?.isFlexible 
+                    ? (newJourneyData.dates?.days || 0)
+                    : (newJourneyData.dates?.from && newJourneyData.dates?.to 
+                        ? Math.max(1, Math.ceil((new Date(newJourneyData.dates.to).getTime() - new Date(newJourneyData.dates.from).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                        : 0)
+                }).map((_, i) => ({
+                  dayNumber: i + 1,
+                  title: `Day ${i + 1}`
+                }))
+              }
             }
           });
           
@@ -109,13 +133,31 @@ Only output the raw JSON. Not wrapped in markdown blocks.
                   ? new Date(newJourneyData.dates.to)
                   : null,
               isFlexibleDates: newJourneyData.dates?.isFlexible || false,
+              flexibleDays: newJourneyData.dates?.isFlexible ? newJourneyData.dates.days : null,
+              flexibleMonths: newJourneyData.dates?.isFlexible && newJourneyData.dates.months 
+                ? JSON.stringify(newJourneyData.dates.months) 
+                : null,
+              userId: user?.id ?? null,
+              days: {
+                create: Array.from({ 
+                  length: newJourneyData.dates?.isFlexible 
+                    ? (newJourneyData.dates?.days || 0)
+                    : (newJourneyData.dates?.from && newJourneyData.dates?.to 
+                        ? Math.max(1, Math.ceil((new Date(newJourneyData.dates.to).getTime() - new Date(newJourneyData.dates.from).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                        : 0)
+                }).map((_, i) => ({
+                  dayNumber: i + 1,
+                  title: `Day ${i + 1}`
+                }))
+              }
             }
           });
           
           chat = await prisma.chat.create({
             data: {
               journeyId: journey.id,
-              title: `Trip to ${newJourneyData.destination}`
+              title: `Trip to ${newJourneyData.destination}`,
+              userId: user?.id ?? null,
             }
           });
         }
@@ -300,17 +342,45 @@ export async function GET(request: Request) {
 
     if (!chat) return NextResponse.json({ error: "Chat not found" }, { status: 404 });
 
-    const journey = chat.journeyId
+    let journey = chat.journeyId
       ? await prisma.journey.findUnique({
           where: { id: chat.journeyId },
           include: {
+            days: { orderBy: { dayNumber: 'asc' } },
             itineraryItems: {
               include: { poi: { include: { tags: { include: { cluster: true } } } } },
-              orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }]
+              orderBy: [{ dayNumber: 'asc' }, { startTime: 'asc' }, { orderIndex: 'asc' }]
             }
           }
         })
       : null;
+
+    // Backward compatibility for old journeys without JourneyDay records
+    if (journey && journey.days.length === 0) {
+      let numDays = 0;
+      if (journey.isFlexibleDates) {
+        numDays = journey.flexibleDays || 5;
+      } else if (journey.startDate && journey.endDate) {
+        numDays = Math.max(1, Math.ceil((new Date(journey.endDate).getTime() - new Date(journey.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      } else {
+        numDays = journey.itineraryItems.reduce((max, item) => Math.max(max, item.dayNumber || 0), 1);
+      }
+
+      if (numDays > 0) {
+        const newDays = await Promise.all(
+          Array.from({ length: numDays }).map((_, i) => 
+            prisma.journeyDay.create({
+              data: {
+                journeyId: journey.id,
+                dayNumber: i + 1,
+                title: `Day ${i + 1}`
+              }
+            })
+          )
+        );
+        journey.days = newDays;
+      }
+    }
 
     return NextResponse.json({ chat, journey });
   } catch (error) {

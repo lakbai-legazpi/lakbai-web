@@ -96,7 +96,7 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
     const supabase = createClient();
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from('avatar')
       .upload(filePath, selectedFile, {
         upsert: true,
         contentType: selectedFile.type,
@@ -108,7 +108,7 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
       return;
     }
 
-    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const { data } = supabase.storage.from('avatar').getPublicUrl(filePath);
     setAvatarUrl(data.publicUrl);
     openToast('Profile picture updated.', 'success');
     event.target.value = '';

@@ -20,7 +20,6 @@ type ChatboxProps = {
   onOpenNewJourneyModal?: () => void;
 };
 
-import NewJourneyModal from '../../../_components/NewJourneyModal';
 
 export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
   const [message, setMessage] = useState('');
@@ -31,7 +30,6 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
   const [journey, setJourney] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
-  const [isLocalModalOpen, setIsLocalModalOpen] = useState(false);
 
   const params = useParams();
   const chatId = Array.isArray(params?.id) ? params.id[0] : params?.id;
@@ -69,6 +67,39 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
     fetchChat();
   }, [chatId, router]);
 
+  useEffect(() => {
+    const handleJourneyLinked = (e: any) => {
+      const result = e.detail;
+      if (result && result.chat?.id === chat?.id) {
+        setJourney(result.journey);
+        setChat(result.chat);
+        setMessages(result.chat.messages || []);
+        setJourneyOpen(true); // Smoothly open the journey area
+      }
+    };
+    window.addEventListener('journey-linked', handleJourneyLinked);
+    return () => window.removeEventListener('journey-linked', handleJourneyLinked);
+  }, [chat]);
+
+  useEffect(() => {
+    const handleJourneyUpdated = async () => {
+      if (!chatId) return;
+      try {
+        const res = await fetch(`/api/chat?id=${chatId}`);
+        const data = await res.json();
+        if (data.chat) {
+          setChat(data.chat);
+          setJourney(data.journey || null);
+          setMessages(data.chat.messages || []);
+        }
+      } catch (err) {
+        console.error("Failed to refresh chat on journey update", err);
+      }
+    };
+    window.addEventListener('journey-updated', handleJourneyUpdated);
+    return () => window.removeEventListener('journey-updated', handleJourneyUpdated);
+  }, [chatId]);
+
   const handleSendMessage = async () => {
     if (!message.trim() || !chat) return;
     
@@ -102,16 +133,6 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
     setIsAiTyping(false);
   };
 
-  const handleLocalModalSubmit = async (newJourneyData: any) => {
-    const result = await linkJourneyToChat(chat.id, newJourneyData);
-    if (result) {
-      setIsLocalModalOpen(false);
-      setJourney(result.journey);
-      setChat(result.chat);
-      setMessages(result.chat.messages || []);
-      router.refresh();
-    }
-  };
 
   const isBlankJourney = !chat?.journeyId;
   const poiCount = journey?.itineraryItems?.length || 0;
@@ -125,7 +146,7 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
           <div className='flex items-center gap-2'>
             {isBlankJourney ? (
               <button
-                onClick={() => setIsLocalModalOpen(true)}
+                onClick={() => onOpenNewJourneyModal?.()}
                 className='flex items-center gap-2 rounded-full border border-text-muted bg-primary-600 py-[6px] pl-4 pr-4 shadow-sm hover:bg-primary-700 transition-colors'
               >
                 <Luggage size={18} strokeWidth={2} className='text-white' />
@@ -255,12 +276,6 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
         />
       )}
 
-      {/* Local Modal specifically updating current chat session exclusively */}
-      <NewJourneyModal 
-        open={isLocalModalOpen} 
-        onClose={() => setIsLocalModalOpen(false)} 
-        onSubmit={handleLocalModalSubmit}
-      />
     </div>
   );
 }

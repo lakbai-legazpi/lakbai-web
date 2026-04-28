@@ -26,7 +26,7 @@ export default async function AppLayout({
   }
 
   const chats = await prisma.chat.findMany({
-    where: { journey: { userId: user.id } },
+    where: { userId: user.id },
     orderBy: { updatedAt: 'desc' },
   });
 
@@ -35,9 +35,14 @@ export default async function AppLayout({
     orderBy: { createdAt: 'desc' },
   });
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { firstName: true, lastName: true, username: true, avatarUrl: true }
+  });
+
   return (
     <div className='flex h-screen w-full flex-row'>
-      <Sidebar />
+      <Sidebar userProfile={dbUser} />
       <div className='flex-1 overflow-hidden relative'>
         <GlobalChatbarWrapper initialChats={chats} initialJourneys={journeys}>
           {children}

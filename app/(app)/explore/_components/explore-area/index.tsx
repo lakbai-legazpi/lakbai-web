@@ -3,15 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Bookmark,
   ChevronLeft,
   ChevronRight,
   MapPin,
-  Plus,
   Search,
   SlidersHorizontal,
   Star
 } from 'lucide-react';
+import { PoiActionButtons } from '@/components/map-area/PoiActionButtons';
 import { TextBody, TextHeading } from '@/components/text';
 import { cn } from '@/lib/cn';
 import {
@@ -323,26 +322,12 @@ export default function ExploreArea() {
                       <div className='pointer-events-none absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent' />
 
                       <div className='absolute top-3 right-3 z-10 flex items-center gap-2'>
-                        <button
-                          type='button'
-                          onClick={event => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                          }}
-                          className='flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md transition hover:bg-black/50'
-                        >
-                          <Bookmark className='h-4 w-4' />
-                        </button>
-                        <button
-                          type='button'
-                          onClick={event => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                          }}
-                          className='flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md transition hover:bg-black/50'
-                        >
-                          <Plus className='h-4 w-4' />
-                        </button>
+                        <PoiActionButtons 
+                          poiId={poi.id}
+                          initialVouchCount={poi.vouchCount ?? 0}
+                          layout="compact"
+                          buttonClassName="border-0 bg-black/30 text-white hover:text-white hover:bg-black/50 backdrop-blur-md px-2"
+                        />
                       </div>
 
                       {images.length > 1 && (

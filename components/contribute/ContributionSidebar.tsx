@@ -16,6 +16,8 @@ import {
 import { cn } from '@/lib/cn';
 import { TextBody, TextHeading } from '@/components/text';
 import type { POI } from '@/components/map-area/types';
+import { IconPicker } from '@/components/ui/IconPicker';
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 
 export type ContributionMode = 'add' | 'edit';
 export type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -56,6 +58,9 @@ export interface ContributionContactForm {
 export interface ContributionFormState {
   name: string;
   description: string;
+  primaryTagCluster: string;
+  primaryTagName: string;
+  primaryTagIcon: string;
   latitude: string;
   longitude: string;
   address: ContributionAddressForm;
@@ -74,6 +79,8 @@ export interface ContributionSidebarProps {
   submitStatus: SubmitStatus;
   errorMessage: string;
   isPinModeEnabled: boolean;
+  availableClusters?: string[];
+  availableTags?: string[];
   onReset: () => void;
   onSubmit: (event: React.FormEvent) => void;
   onTogglePinMode: () => void;
@@ -112,6 +119,8 @@ export function ContributionSidebar({
   submitStatus,
   errorMessage,
   isPinModeEnabled,
+  availableClusters = [],
+  availableTags = [],
   onReset,
   onSubmit,
   onTogglePinMode,
@@ -201,6 +210,44 @@ export function ContributionSidebar({
               value={form.description}
               onChange={event => onFormFieldChange('description', event.target.value)}
               className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 resize-none rounded-lg border px-3 py-2 text-sm outline-none transition'
+            />
+          </div>
+
+          <div className='border-border rounded-lg border p-3 space-y-3 bg-surface-light'>
+            <p className='text-text-main text-xs font-semibold pb-1 border-b border-border'>
+              Primary Tag & Cluster
+            </p>
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-text-main text-[11px] font-semibold' htmlFor='contrib-cluster'>
+                  Cluster Name <span className='text-error-500'>*</span>
+                </label>
+                <AutocompleteInput
+                  id='contrib-cluster'
+                  placeholder='e.g. Food, Nature'
+                  required
+                  value={form.primaryTagCluster}
+                  onValueChange={val => onFormFieldChange('primaryTagCluster', val)}
+                  options={availableClusters}
+                />
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-text-main text-[11px] font-semibold' htmlFor='contrib-tag'>
+                  Tag Name <span className='text-error-500'>*</span>
+                </label>
+                <AutocompleteInput
+                  id='contrib-tag'
+                  placeholder='e.g. Cafe, Park'
+                  required
+                  value={form.primaryTagName}
+                  onValueChange={val => onFormFieldChange('primaryTagName', val)}
+                  options={availableTags}
+                />
+              </div>
+            </div>
+            <IconPicker 
+              value={form.primaryTagIcon}
+              onChange={(val) => onFormFieldChange('primaryTagIcon', val)}
             />
           </div>
 
