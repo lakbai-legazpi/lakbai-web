@@ -6,6 +6,8 @@ type UpdateJourneyBody = {
   startDate?: string | null;
   endDate?: string | null;
   isFlexibleDates?: boolean;
+  companions?: string | null;
+  budget?: number | null;
 };
 
 export async function PATCH(
@@ -46,6 +48,8 @@ export async function PATCH(
       isFlexibleDates?: boolean;
       flexibleDays?: number | null;
       flexibleMonths?: string | null;
+      companions?: string | null;
+      budget?: number | null;
     } = {};
 
     if ('startDate' in body) data.startDate = body.startDate ? new Date(body.startDate) : null;
@@ -56,6 +60,8 @@ export async function PATCH(
       const fm = (body as any).flexibleMonths;
       data.flexibleMonths = Array.isArray(fm) ? JSON.stringify(fm) : fm;
     }
+    if ('companions' in body) data.companions = body.companions ?? null;
+    if ('budget' in body) data.budget = body.budget ?? null;
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'At least one updatable field is required.' }, { status: 400 });

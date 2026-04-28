@@ -150,6 +150,7 @@ export default function MapArea({
               latitude: Number(p.latitude),
               longitude: Number(p.longitude),
               vouchCount: Number(p.vouchCount),
+              priceLevel: p.priceLevel ?? null,
               primaryTagId: p.primaryTagId ?? null,
               tags: p.tags || [],
               galleries: p.galleries || [],
@@ -158,7 +159,7 @@ export default function MapArea({
               phoneNumber: p.phoneNumber ?? null,
               email: p.email ?? null,
               links: p.links || [],
-              reviews: p.reviews || [],
+              reviews: p.reviews || []
             });
             setSelectedPoiId(poiFromUrl);
           } else {

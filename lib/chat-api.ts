@@ -22,6 +22,7 @@ export async function createJourneyChat(newJourneyData: {
   destination: string;
   companions?: string;
   preferences?: string;
+  budget?: number | null;
   dates?: {
     from?: string;
     to?: string;
@@ -49,6 +50,7 @@ export async function linkJourneyToChat(chatId: string, newJourneyData: {
   destination: string;
   companions?: string;
   preferences?: string;
+  budget?: number | null;
   dates?: {
     from?: string;
     to?: string;

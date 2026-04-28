@@ -6,8 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 
-const CONTACTS_AND_DESC_FILE = 'POI-Legazpi - ContactsANDDescp.csv';
-const WEBSITES_FILE = 'POI-Legazpi - Website.csv';
+const BUDGET_FILE = 'POI-Legazpi - Budget.csv';
 
 loadEnvironmentVariables();
 
@@ -21,17 +20,10 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-type ContactsAndDescCsvRow = {
-    id?: string;
-    phoneNumber?: string;
-    email?: string;
-    Description?: string;
-};
-
-type WebsiteCsvRow = {
+type BudgetCsvRow = {
     poiId?: string;
-    label?: string;
-    url?: string;
+    poiName?: string;
+    budget?: string;
 };
 
 type NotFoundError = {
@@ -98,13 +90,13 @@ function isRecordNotFoundError(error: unknown): boolean {
     );
 }
 
-async function seedContactsAndDescriptions(): Promise<void> {
-    console.log(`Updating POI contact and description fields from ${CONTACTS_AND_DESC_FILE}...`);
+async function seedPoiBudgets(): Promise<void> {
+    console.log(`Updating POI price levels from ${BUDGET_FILE}...`);
 
-    const rows = await readCsvRows<ContactsAndDescCsvRow>(CONTACTS_AND_DESC_FILE);
+    const rows = await readCsvRows<BudgetCsvRow>(BUDGET_FILE);
 
     if (rows.length === 0) {
-        console.warn('Contacts/description CSV has no rows to process.');
+        console.warn('Budget CSV has no rows to process.');
         return;
     }
 
@@ -113,41 +105,32 @@ async function seedContactsAndDescriptions(): Promise<void> {
     let notFound = 0;
 
     for (const [index, row] of rows.entries()) {
-        const poiId = normalizeNullableCell(row.id);
+        const poiId = normalizeNullableCell(row.poiId);
+        const budgetRaw = normalizeNullableCell(row.budget);
 
-        if (!poiId) {
+        if (!poiId || !budgetRaw) {
             skippedInvalidRows += 1;
-            console.warn(`POI contacts: skipping row ${index + 2} due to missing id.`);
+            console.warn(`POI budget: skipping row ${index + 2} due to missing poiId or budget.`);
             continue;
         }
 
-        const phoneNumber = normalizeNullableCell(row.phoneNumber);
-        const email = normalizeNullableCell(row.email);
-        const description = normalizeNullableCell(row.Description);
-
-        const data: {
-            phoneNumber: string | null;
-            email: string | null;
-            description?: string;
-        } = {
-            phoneNumber,
-            email,
-        };
-
-        if (description !== null) {
-            data.description = description;
+        const budgetLevel = Number.parseInt(budgetRaw, 10);
+        if (Number.isNaN(budgetLevel) || budgetLevel < 1 || budgetLevel > 4) {
+            skippedInvalidRows += 1;
+            console.warn(`POI budget: row ${index + 2} has invalid budget value "${budgetRaw}".`);
+            continue;
         }
 
         try {
             await prisma.pOI.update({
                 where: { id: poiId },
-                data,
+                data: { priceLevel: budgetLevel },
             });
             updated += 1;
         } catch (error) {
             if (isRecordNotFoundError(error)) {
                 notFound += 1;
-                console.warn(`POI contacts: row ${index + 2} references missing POI id ${poiId}.`);
+                console.warn(`POI budget: row ${index + 2} references missing POI id ${poiId}.`);
                 continue;
             }
 
@@ -156,117 +139,14 @@ async function seedContactsAndDescriptions(): Promise<void> {
     }
 
     console.log(
-        `POI contacts/descriptions done. Updated: ${updated}, Missing POIs: ${notFound}, Skipped invalid rows: ${skippedInvalidRows}`
-    );
-}
-
-async function seedPoiLinks(): Promise<void> {
-    console.log(`Inserting POI links from ${WEBSITES_FILE}...`);
-
-    const rows = await readCsvRows<WebsiteCsvRow>(WEBSITES_FILE);
-
-    if (rows.length === 0) {
-        console.warn('Website CSV has no rows to process.');
-        return;
-    }
-
-    const normalizedRows = rows
-        .map((row, index) => ({
-            rowNumber: index + 2,
-            poiId: normalizeNullableCell(row.poiId),
-            label: normalizeNullableCell(row.label),
-            url: normalizeNullableCell(row.url),
-        }));
-
-    let skippedInvalidRows = 0;
-    const validRows: Array<{ poiId: string; label: string; url: string }> = [];
-
-    for (const row of normalizedRows) {
-        if (!row.poiId || !row.label || !row.url) {
-            skippedInvalidRows += 1;
-            continue;
-        }
-
-        validRows.push({
-            poiId: row.poiId,
-            label: row.label,
-            url: row.url,
-        });
-    }
-
-    if (validRows.length === 0) {
-        console.warn('No valid website rows found after cleanup.');
-        return;
-    }
-
-    const poiIds = Array.from(new Set(validRows.map((row) => row.poiId)));
-    const existingPois = await prisma.pOI.findMany({
-        where: {
-            id: {
-                in: poiIds,
-            },
-        },
-        select: {
-            id: true,
-        },
-    });
-
-    const existingPoiIds = new Set(existingPois.map((poi) => poi.id));
-
-    const existingLinks = await prisma.pOILink.findMany({
-        where: {
-            poiId: {
-                in: Array.from(existingPoiIds),
-            },
-        },
-        select: {
-            poiId: true,
-            label: true,
-            url: true,
-        },
-    });
-
-    const existingKeys = new Set(
-        existingLinks.map((link) => `${link.poiId}::${link.label}::${link.url}`)
-    );
-
-    const seenKeys = new Set<string>();
-    const createData: Array<{ poiId: string; label: string; url: string }> = [];
-    let skippedMissingPois = 0;
-
-    for (const row of validRows) {
-        if (!existingPoiIds.has(row.poiId)) {
-            skippedMissingPois += 1;
-            continue;
-        }
-
-        const key = `${row.poiId}::${row.label}::${row.url}`;
-        if (existingKeys.has(key) || seenKeys.has(key)) {
-            continue;
-        }
-
-        seenKeys.add(key);
-        createData.push(row);
-    }
-
-    let created = 0;
-    if (createData.length > 0) {
-        const result = await prisma.pOILink.createMany({
-            data: createData,
-        });
-        created = result.count;
-    }
-
-    console.log(
-        `POI links done. Created: ${created}, Skipped invalid rows: ${skippedInvalidRows}, Skipped missing POIs: ${skippedMissingPois}`
+        `POI budgets done. Updated: ${updated}, Missing POIs: ${notFound}, Skipped invalid rows: ${skippedInvalidRows}`
     );
 }
 
 async function main(): Promise<void> {
-    console.log('Starting seed import for contacts/descriptions and POI links...');
+    console.log('Starting seed import for POI budgets...');
 
-    await seedContactsAndDescriptions();
-    await seedPoiLinks();
+    await seedPoiBudgets();
 
     console.log('Seed import completed successfully.');
 }

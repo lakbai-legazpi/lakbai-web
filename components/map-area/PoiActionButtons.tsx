@@ -13,9 +13,9 @@ interface PoiActionButtonsProps {
   buttonClassName?: string;
 }
 
-export function PoiActionButtons({ 
-  poiId, 
-  initialVouchCount, 
+export function PoiActionButtons({
+  poiId,
+  initialVouchCount,
   layout = 'row',
   className,
   buttonClassName
@@ -47,11 +47,11 @@ export function PoiActionButtons({
   const handleVouch = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Optimistic update
     const wasVouched = isVouched;
     setIsVouched(!wasVouched);
-    setVouchCount(prev => wasVouched ? prev - 1 : prev + 1);
+    setVouchCount(prev => (wasVouched ? prev - 1 : prev + 1));
 
     try {
       const res = await fetch(`/api/pois/${poiId}/vouch`, { method: 'POST' });
@@ -61,20 +61,22 @@ export function PoiActionButtons({
     } catch (err) {
       // Revert optimistic update
       setIsVouched(wasVouched);
-      setVouchCount(prev => wasVouched ? prev + 1 : prev - 1);
+      setVouchCount(prev => (wasVouched ? prev + 1 : prev - 1));
     }
   };
 
   const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Optimistic update
     const wasFavorited = isFavorited;
     setIsFavorited(!wasFavorited);
 
     try {
-      const res = await fetch(`/api/pois/${poiId}/favorite`, { method: 'POST' });
+      const res = await fetch(`/api/pois/${poiId}/favorite`, {
+        method: 'POST'
+      });
       if (!res.ok) throw new Error('Favorite failed');
       const data = await res.json();
       setIsFavorited(data.isFavorited);
@@ -86,57 +88,72 @@ export function PoiActionButtons({
 
   return (
     <>
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn('flex items-center gap-2', className)}>
         <button
           type='button'
           onClick={handleVouch}
           disabled={isLoading}
           className={cn(
             'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
-            isVouched ? 'bg-primary-500 text-white border-primary-500 hover:bg-primary-600' : 'hover:bg-muted',
+            isVouched
+              ? 'bg-primary-500 border-primary-500 hover:bg-primary-600 text-white'
+              : 'hover:bg-muted',
             buttonClassName
           )}
         >
-          <ThumbsUp className={cn("h-3.5 w-3.5", isVouched ? "fill-white" : "")} /> 
-          {vouchCount}
+          <ThumbsUp
+            className={cn('h-3.5 w-3.5', isVouched ? 'fill-white' : '')}
+          />
+          {layout === 'row' ? (
+            <>
+              <span>Vouch</span>
+              <span className='text-xs opacity-75'>{vouchCount}</span>
+            </>
+          ) : (
+            vouchCount
+          )}
         </button>
-        
+
         <button
           type='button'
           onClick={handleFavorite}
           disabled={isLoading}
           className={cn(
             'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
-            isFavorited ? 'bg-primary-500 text-white border-primary-500 hover:bg-primary-600' : 'hover:bg-muted',
+            isFavorited
+              ? 'bg-primary-500 border-primary-500 hover:bg-primary-600 text-white'
+              : 'hover:bg-muted',
             buttonClassName
           )}
         >
-          <Bookmark className={cn("h-3.5 w-3.5", isFavorited ? "fill-white" : "")} /> 
+          <Bookmark
+            className={cn('h-3.5 w-3.5', isFavorited ? 'fill-white' : '')}
+          />
           {layout === 'row' && 'Favorite'}
         </button>
-        
+
         <button
           type='button'
-          onClick={(e) => {
+          onClick={e => {
             e.preventDefault();
             e.stopPropagation();
             setIsModalOpen(true);
           }}
           className={cn(
-            'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition hover:bg-muted',
+            'border-foreground/40 text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition',
             buttonClassName
           )}
         >
-          <PlusCircle className='h-3.5 w-3.5' /> 
+          <PlusCircle className='h-3.5 w-3.5' />
           {layout === 'row' && 'Add to Journey'}
         </button>
       </div>
 
       {isModalOpen && (
-        <SelectJourneyModal 
-          open={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          poiId={poiId} 
+        <SelectJourneyModal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          poiId={poiId}
         />
       )}
     </>

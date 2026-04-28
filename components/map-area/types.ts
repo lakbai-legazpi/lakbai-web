@@ -61,6 +61,7 @@ export type POI = {
   phoneNumber?: string | null;
   email?: string | null;
   vouchCount: number;
+  priceLevel?: number | null;
   primaryTagId?: string | null;
   tags: POITag[];
   galleries: POIGallery[];

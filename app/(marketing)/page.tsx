@@ -5,13 +5,13 @@ import {
   TextDisplay,
   TextHeading,
   TextSubheading,
-  TextBody,
+  TextBody
 } from '@/components/text';
 import { GithubLogo } from '@/components/icons/GithubLogo';
 import {
   AuthProvider,
   NavAuthButtons,
-  HeroCTA,
+  HeroCTA
 } from '@/app/(marketing)/_components/HeroActions';
 import { createClient } from '@/lib/supabase/server';
 
@@ -19,7 +19,7 @@ export default async function LandingPage() {
   // Server-side session check — redirect authenticated users straight to /chat
   const supabase = await createClient();
   const {
-    data: { user },
+    data: { user }
   } = await supabase.auth.getUser();
 
   if (user) {
@@ -60,7 +60,7 @@ export default async function LandingPage() {
                   <span className='text-primary-500'>perfect journey</span>
                 </TextDisplay>
 
-                <TextSubheading className='mb-12 max-w-2xl leading-relaxed text-text-muted md:text-[28px]'>
+                <TextSubheading className='text-text-muted mb-12 max-w-2xl leading-relaxed md:text-[28px]'>
                   Smart itineraries for the modern{' '}
                   <span className='text-primary-500 font-semibold'>local</span>{' '}
                   explorer
@@ -110,8 +110,8 @@ export default async function LandingPage() {
                     Seamless Itinerary
                   </TextHeading>
                   <TextBody className='text-base leading-relaxed text-slate-500'>
-                    A centralized place to manage your basecamp, daily schedules,
-                    and trip history.
+                    A centralized place to manage your basecamp, daily
+                    schedules, and journey history.
                   </TextBody>
                 </div>
               </div>
@@ -124,8 +124,8 @@ export default async function LandingPage() {
             <div className='mb-10 h-px w-full bg-slate-200/60' />
             <div className='flex flex-col gap-10'>
               {/* Top Layer */}
-              <div className='flex flex-col md:flex-row justify-between items-start gap-8'>
-                <div className='flex flex-col gap-4 max-w-2xl'>
+              <div className='flex flex-col items-start justify-between gap-8 md:flex-row'>
+                <div className='flex max-w-2xl flex-col gap-4'>
                   <div className='relative h-9 w-9'>
                     <Image
                       src='/logos/lakbai.svg'
@@ -136,21 +136,46 @@ export default async function LandingPage() {
                   </div>
                 </div>
                 <div className='flex flex-col gap-3 md:text-right'>
-                  <a href='#' className='font-medium text-text-muted hover:text-slate-900 transition-colors'>About</a>
-                  <a href='#' className='font-medium text-text-muted hover:text-slate-900 transition-colors'>Team</a>
-                  <a href='#' className='font-medium text-text-muted hover:text-slate-900 transition-colors'>Contact</a>
+                  <a
+                    href='#'
+                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
+                  >
+                    About
+                  </a>
+                  <a
+                    href='#'
+                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
+                  >
+                    Team
+                  </a>
+                  <a
+                    href='#'
+                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
+                  >
+                    Contact
+                  </a>
                 </div>
               </div>
 
               {/* Bottom Layer */}
-              <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-8 border-t border-slate-200/60'>
-                <div className='flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8'>
-                  <TextBody className='font-medium text-text-muted'>
+              <div className='flex flex-col items-start justify-between gap-4 border-t border-slate-200/60 pt-8 md:flex-row md:items-center'>
+                <div className='flex flex-col items-start gap-4 md:flex-row md:items-center md:gap-8'>
+                  <TextBody className='text-text-muted font-medium'>
                     © 2026 Lakbai
                   </TextBody>
                   <div className='flex items-center gap-4 md:gap-6'>
-                    <a href='#' className='text-sm font-medium text-text-muted hover:text-text-main transition-colors'>Privacy Policy</a>
-                    <a href='#' className='text-sm font-medium text-text-muted hover:text-text-main transition-colors'>Terms of Service</a>
+                    <a
+                      href='#'
+                      className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
+                    >
+                      Privacy Policy
+                    </a>
+                    <a
+                      href='#'
+                      className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
+                    >
+                      Terms of Service
+                    </a>
                   </div>
                 </div>
                 <div className='flex items-center gap-4'>
@@ -160,7 +185,7 @@ export default async function LandingPage() {
                     rel='noreferrer'
                     className='text-text-muted hover:text-text-main transition-colors'
                   >
-                    <span className="sr-only">GitHub</span>
+                    <span className='sr-only'>GitHub</span>
                     <GithubLogo size={24} className='hover:text-primary-400' />
                   </a>
                 </div>

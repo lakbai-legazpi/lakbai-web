@@ -69,6 +69,7 @@ export type POIWithRelations = {
 
   // Retained for existing tag logic compatibility
   vouchCount?: number;
+  priceLevel?: number | null;
   tags?: any[];
   primaryTagId?: string | null;
 };
@@ -88,30 +89,52 @@ function formatTime12Hour(timeStr: string | null) {
 // Helper to get today's operating status
 function getCurrentStatus(hours: POIWithRelations['operatingHours']) {
   if (!hours || hours.length === 0) return null;
-  
+
   const today = new Date().getDay();
   const todayHours = hours.find(h => h.dayOfWeek === today);
-  
+
   if (!todayHours) return null;
-  
+
   if (todayHours.isClosed) {
-    return { label: 'Closed', badgeClass: 'bg-red-100 text-red-700', isClosed: true };
+    return {
+      label: 'Closed',
+      badgeClass: 'bg-red-100 text-red-700',
+      isClosed: true
+    };
   }
-  
+
   if (todayHours.is24Hours) {
-    return { label: 'Open 24/7', badgeClass: 'bg-green-100 text-green-700', isClosed: false };
+    return {
+      label: 'Open 24/7',
+      badgeClass: 'bg-green-100 text-green-700',
+      isClosed: false
+    };
   }
-  
+
   if (todayHours.openTime && todayHours.closeTime) {
     const open = formatTime12Hour(todayHours.openTime);
     const close = formatTime12Hour(todayHours.closeTime);
-    return { label: `Open ${open} - ${close}`, badgeClass: 'bg-emerald-100 text-emerald-700', isClosed: false };
+    return {
+      label: `Open ${open} - ${close}`,
+      badgeClass: 'bg-emerald-100 text-emerald-700',
+      isClosed: false
+    };
   }
-  
+
   return null;
 }
 
+function formatBudgetLabel(level?: number | null): string {
+  if (!level || level < 1) return '';
+  return '₱'.repeat(Math.min(level, 4));
+}
 
+const budgetDescriptions: Record<number, string> = {
+  1: '₱ (Budget / Affordable): Under ₱250 per person.',
+  2: '₱₱ (Moderate / Casual): ₱250 to ₱600 per person.',
+  3: '₱₱₱ (Expensive / High-End): ₱600 to ₱1,500 per person.',
+  4: '₱₱₱₱ (Luxury): ₱1,500+ per person.'
+};
 
 type PoiDetailsOverlayProps = {
   poi: POIWithRelations;
@@ -180,23 +203,32 @@ export default function PoiDetailsOverlay({
   const meaningfulOperatingHours = useMemo(
     () =>
       (poi.operatingHours ?? []).filter(record => {
-        const hasOpenTime = Boolean(record.openTime && record.openTime.trim().length > 0);
-        const hasCloseTime = Boolean(record.closeTime && record.closeTime.trim().length > 0);
-        return record.isClosed || record.is24Hours || hasOpenTime || hasCloseTime;
+        const hasOpenTime = Boolean(
+          record.openTime && record.openTime.trim().length > 0
+        );
+        const hasCloseTime = Boolean(
+          record.closeTime && record.closeTime.trim().length > 0
+        );
+        return (
+          record.isClosed || record.is24Hours || hasOpenTime || hasCloseTime
+        );
       }),
     [poi.operatingHours]
   );
 
-  const currentStatus = useMemo(() => getCurrentStatus(poi.operatingHours), [poi.operatingHours]);
+  const currentStatus = useMemo(
+    () => getCurrentStatus(poi.operatingHours),
+    [poi.operatingHours]
+  );
 
   const { averageRating, reviewCount } = useMemo(() => {
     const reviews = poi.reviews || [];
     if (reviews.length === 0) return { averageRating: 0, reviewCount: 0 };
-    
+
     const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
-    return { 
-      averageRating: (sum / reviews.length).toFixed(1), 
-      reviewCount: reviews.length 
+    return {
+      averageRating: (sum / reviews.length).toFixed(1),
+      reviewCount: reviews.length
     };
   }, [poi.reviews]);
 
@@ -246,10 +278,10 @@ export default function PoiDetailsOverlay({
           </div>
 
           <div className='flex items-center gap-2'>
-            <PoiActionButtons 
+            <PoiActionButtons
               poiId={poi.id}
               initialVouchCount={poi.vouchCount ?? 0}
-              layout="compact"
+              layout='row'
             />
             <button
               type='button'
@@ -270,16 +302,25 @@ export default function PoiDetailsOverlay({
 
           <div className='mt-3 flex flex-wrap items-center gap-2 text-sm'>
             <span className='border-foreground/40 inline-flex items-center gap-1 rounded-full border px-2.5 py-1'>
-              <Star className='h-3.5 w-3.5 fill-current text-primary-500' /> {reviewCount > 0 ? averageRating : 'New'} •{' '}
-              {reviewCount} reviews
+              <Star className='text-primary-500 h-3.5 w-3.5 fill-current' />{' '}
+              {reviewCount > 0 ? averageRating : 'New'} • {reviewCount} reviews
             </span>
             <span className='text-muted-foreground'>{detailAddress}</span>
             {copied && <span className='text-emerald-600'>Link copied</span>}
           </div>
 
-          {poi.tags && poi.tags.length > 0 && (
+          {(poi.tags && poi.tags.length > 0) ||
+          (poi.priceLevel && poi.priceLevel > 0) ? (
             <div className='mt-3 flex flex-wrap gap-2'>
-              {poi.tags.map(tag => {
+              {poi.priceLevel && poi.priceLevel > 0 && (
+                <span
+                  className='bg-surface text-text-main border-border inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium'
+                  title={budgetDescriptions[poi.priceLevel]}
+                >
+                  {formatBudgetLabel(poi.priceLevel)}
+                </span>
+              )}
+              {poi.tags?.map(tag => {
                 const { icon: TagIcon, color } = getTagVisual(tag);
                 return (
                   <span
@@ -292,7 +333,7 @@ export default function PoiDetailsOverlay({
                 );
               })}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className='mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1.3fr_0.85fr]'>
@@ -422,19 +463,21 @@ export default function PoiDetailsOverlay({
                 <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
                   <MapPin className='h-4 w-4 shrink-0' /> Address
                 </TextBody>
-                <TextBody className='text-foreground/80 mt-1 whitespace-pre-line break-words'>
+                <TextBody className='text-foreground/80 mt-1 break-words whitespace-pre-line'>
                   {[
                     poi.address?.street,
                     poi.address?.barangay,
                     poi.address?.city,
                     poi.address?.province,
                     'Philippines'
-                  ].filter(Boolean).join('\n')}
+                  ]
+                    .filter(Boolean)
+                    .join('\n')}
                 </TextBody>
               </div>
 
               {/* Contact / Links Block */}
-              <div className='space-y-3 min-w-0'>
+              <div className='min-w-0 space-y-3'>
                 {poi.phoneNumber && (
                   <div>
                     <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
@@ -445,14 +488,17 @@ export default function PoiDetailsOverlay({
                     </TextBody>
                   </div>
                 )}
-                
+
                 {poi.email && (
                   <div>
                     <TextBody className='text-foreground flex items-center gap-2 font-semibold'>
                       <Mail className='h-4 w-4 shrink-0' /> Email
                     </TextBody>
                     <TextBody className='text-foreground/80 mt-1 break-all'>
-                      <a href={`mailto:${poi.email}`} className="hover:underline">
+                      <a
+                        href={`mailto:${poi.email}`}
+                        className='hover:underline'
+                      >
                         {poi.email}
                       </a>
                     </TextBody>
@@ -467,9 +513,16 @@ export default function PoiDetailsOverlay({
                           {link.label}
                         </TextBody>
                         <TextBody className='text-foreground/80 mt-1 break-all'>
-                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-start gap-1 text-primary-600">
-                            <span className="break-all">{link.url.replace(/^https?:\/\//, '')}</span>
-                            <ExternalLink className='h-3 w-3 shrink-0 mt-1' />
+                          <a
+                            href={link.url}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-primary-600 flex items-start gap-1 hover:underline'
+                          >
+                            <span className='break-all'>
+                              {link.url.replace(/^https?:\/\//, '')}
+                            </span>
+                            <ExternalLink className='mt-1 h-3 w-3 shrink-0' />
                           </a>
                         </TextBody>
                       </div>
@@ -481,18 +534,23 @@ export default function PoiDetailsOverlay({
               {/* Operating Hours Block */}
               {meaningfulOperatingHours.length > 0 && (
                 <div className='min-w-0'>
-                  <TextBody className='text-foreground flex items-center gap-2 font-semibold mb-2'>
+                  <TextBody className='text-foreground mb-2 flex items-center gap-2 font-semibold'>
                     Operating Hours
                   </TextBody>
-                  
+
                   {currentStatus ? (
                     <div className='mb-3'>
-                      <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold', currentStatus.badgeClass)}>
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
+                          currentStatus.badgeClass
+                        )}
+                      >
                         {currentStatus.label}
                       </span>
                     </div>
                   ) : (
-                    <TextBody className='text-foreground/70 text-sm italic mb-2'>
+                    <TextBody className='text-foreground/70 mb-2 text-sm italic'>
                       Hours not available
                     </TextBody>
                   )}
@@ -501,32 +559,39 @@ export default function PoiDetailsOverlay({
                     {[...meaningfulOperatingHours]
                       .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
                       .map((record, idx) => {
-                        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        const dayNames = [
+                          'Sun',
+                          'Mon',
+                          'Tue',
+                          'Wed',
+                          'Thu',
+                          'Fri',
+                          'Sat'
+                        ];
                         const dayName = dayNames[record.dayOfWeek];
-                        
+
                         let displayHours = '';
                         if (record.isClosed) displayHours = 'Closed';
-                        else if (record.is24Hours) displayHours = 'Open 24 hours';
+                        else if (record.is24Hours)
+                          displayHours = 'Open 24 hours';
                         else if (record.openTime && record.closeTime) {
                           displayHours = `${formatTime12Hour(record.openTime)} - ${formatTime12Hour(record.closeTime)}`;
                         } else {
                           displayHours = 'Hours not set';
                         }
-                        
+
                         return (
                           <div
                             key={idx}
                             className={cn(
                               'flex items-center justify-between gap-2 text-xs',
-                              record.dayOfWeek === new Date().getDay() ? 'font-bold text-foreground' : 'text-foreground/80'
+                              record.dayOfWeek === new Date().getDay()
+                                ? 'text-foreground font-bold'
+                                : 'text-foreground/80'
                             )}
                           >
-                            <span className='w-8 shrink-0'>
-                              {dayName}
-                            </span>
-                            <span>
-                              {displayHours}
-                            </span>
+                            <span className='w-8 shrink-0'>{dayName}</span>
+                            <span>{displayHours}</span>
                           </div>
                         );
                       })}
@@ -569,17 +634,29 @@ export default function PoiDetailsOverlay({
             <div className='space-y-4'>
               {poi.reviews && poi.reviews.length > 0 ? (
                 poi.reviews.map(review => {
-                  const fullName = [review.user?.firstName, review.user?.lastName].filter(Boolean).join(' ') || review.user?.name || 'Anonymous User';
-                  const dateStr = new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-                  
+                  const fullName =
+                    [review.user?.firstName, review.user?.lastName]
+                      .filter(Boolean)
+                      .join(' ') ||
+                    review.user?.name ||
+                    'Anonymous User';
+                  const dateStr = new Date(review.createdAt).toLocaleDateString(
+                    'en-US',
+                    { year: 'numeric', month: 'short', day: 'numeric' }
+                  );
+
                   return (
                     <article key={review.id} className='border-b pb-4'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>
                           {review.user?.avatarUrl ? (
-                            <img src={review.user.avatarUrl} alt={fullName} className='bg-muted h-12 w-12 rounded-full object-cover' />
+                            <img
+                              src={review.user.avatarUrl}
+                              alt={fullName}
+                              className='bg-muted h-12 w-12 rounded-full object-cover'
+                            />
                           ) : (
-                            <div className='bg-muted h-12 w-12 rounded-full flex items-center justify-center font-bold text-muted-foreground'>
+                            <div className='bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full font-bold'>
                               {fullName.charAt(0)}
                             </div>
                           )}
@@ -590,17 +667,20 @@ export default function PoiDetailsOverlay({
                             </p>
                           </div>
                         </div>
-                        <p className='font-medium flex items-center gap-1'>
-                          {review.rating}/5 <Star className='h-3 w-3 fill-current text-primary-500' />
+                        <p className='flex items-center gap-1 font-medium'>
+                          {review.rating}/5{' '}
+                          <Star className='text-primary-500 h-3 w-3 fill-current' />
                         </p>
                       </div>
 
-                      <p className='mt-3 text-sm whitespace-pre-line'>{review.content}</p>
+                      <p className='mt-3 text-sm whitespace-pre-line'>
+                        {review.content}
+                      </p>
                     </article>
                   );
                 })
               ) : (
-                <div className="py-8 text-center text-muted-foreground">
+                <div className='text-muted-foreground py-8 text-center'>
                   <p>No reviews yet. Be the first to share your experience!</p>
                 </div>
               )}
@@ -642,6 +722,7 @@ export default function PoiDetailsOverlay({
           poiId={poi.id}
           title={poi.name}
           images={galleryImages}
+          initialVouchCount={poi.vouchCount ?? 0}
           onClose={() => setIsGalleryOpen(false)}
           onShare={onCopyShareUrl}
         />

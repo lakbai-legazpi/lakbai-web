@@ -265,8 +265,8 @@ export default function Chatbar({
                     </span>
                     <span className='text-text-muted truncate text-[13px]'>
                       {journey
-                        ? `Trip to ${journey.destination || 'Unknown'}`
-                        : 'Trip'}
+                        ? `Journey to ${journey.destination || 'Unknown'}`
+                        : 'Journey'}
                     </span>
                   </div>
 

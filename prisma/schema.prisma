@@ -39,6 +39,8 @@ model POI {
   latitude       Float
   longitude      Float
   vouchCount     Int              @default(0)
+  /// 1 (budget) to 4 (luxury) price tier for filtering.
+  priceLevel     Int?
   primaryTagId   String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt

@@ -12,6 +12,7 @@ type PoiFullscreenGalleryProps = {
   poiId: string;
   title: string;
   images: POIGallery[];
+  initialVouchCount?: number;
   onClose: () => void;
   onShare?: () => void;
 };
@@ -21,6 +22,7 @@ export default function PoiFullscreenGallery({
   poiId,
   title,
   images,
+  initialVouchCount = 0,
   onClose,
   onShare
 }: PoiFullscreenGalleryProps) {
@@ -52,11 +54,11 @@ export default function PoiFullscreenGallery({
         </div>
 
         <div className='flex items-center gap-2'>
-          <PoiActionButtons 
-            poiId={poiId} 
-            initialVouchCount={0} 
-            layout="row" 
-            buttonClassName="h-9 border-text-main bg-surface text-text-main hover:bg-text-main/10"
+          <PoiActionButtons
+            poiId={poiId}
+            initialVouchCount={initialVouchCount}
+            layout='row'
+            buttonClassName='h-9 border-text-main bg-surface text-text-main hover:bg-text-main/10'
           />
           <button
             type='button'

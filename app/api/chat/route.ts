@@ -70,11 +70,11 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           // User is filling the modal inside an existing blank chat
           journey = await prisma.journey.create({
             data: {
-              title: `Trip to ${newJourneyData.destination}`,
+              title: `Journey to ${newJourneyData.destination}`,
               destination: newJourneyData.destination,
               companions: newJourneyData.companions,
               preferences: newJourneyData.preferences,
-              budget: 0,
+              budget: newJourneyData.budget ?? null,
               startDate: newJourneyData.dates?.isFlexible
                 ? null
                 : newJourneyData.dates?.from
@@ -110,18 +110,18 @@ Only output the raw JSON. Not wrapped in markdown blocks.
             where: { id: body.chatId },
             data: { 
               journeyId: journey.id,
-              title: `Trip to ${newJourneyData.destination}` 
+              title: `Journey to ${newJourneyData.destination}` 
             }
           });
         } else {
           // Totally new context from scratch
           journey = await prisma.journey.create({
             data: {
-              title: `Trip to ${newJourneyData.destination}`,
+              title: `Journey to ${newJourneyData.destination}`,
               destination: newJourneyData.destination,
               companions: newJourneyData.companions,
               preferences: newJourneyData.preferences,
-              budget: 0,
+              budget: newJourneyData.budget ?? null,
               startDate: newJourneyData.dates?.isFlexible
                 ? null
                 : newJourneyData.dates?.from
@@ -156,7 +156,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           chat = await prisma.chat.create({
             data: {
               journeyId: journey.id,
-              title: `Trip to ${newJourneyData.destination}`,
+              title: `Journey to ${newJourneyData.destination}`,
               userId: user?.id ?? null,
             }
           });
@@ -168,6 +168,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         The user just created a new journey with these explicit parameters:
         Destination: ${newJourneyData.destination}
         Companions: ${newJourneyData.companions}
+        Budget: ${newJourneyData.budget ?? 'Any'}
         Preferences: ${newJourneyData.preferences}
         Dates Flexible: ${newJourneyData.dates?.isFlexible}
         
@@ -180,7 +181,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         try {
           aiData = JSON.parse(resText);
         } catch (e) {
-          aiData = { aiText: "Let's plan your trip! What kind of places do you want to visit?", updatedTitle: journey.title };
+          aiData = { aiText: "Let's plan your journey! What kind of places do you want to visit?", updatedTitle: journey.title };
         }
 
         const aiMsg = await prisma.message.create({
