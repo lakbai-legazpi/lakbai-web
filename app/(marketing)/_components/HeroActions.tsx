@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useContext, createContext } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, ChevronLeft, Compass, Code2, Users, MessageSquare } from 'lucide-react';
 import { Modal } from '@/app/(marketing)/_components/UserAuthModal';
 import { createClient } from '@/lib/supabase/client';
-import { TextBody } from '@/components/text';
+import { TextBody, TextHeading } from '@/components/text';
 import { Toast } from '@/app/(app)/_components/Notificaiton';
+import Image from 'next/image';
 
-type AuthView = 'login' | 'signup';
+// Expanded views to include informational modals
+type AuthView = 'login' | 'signup' | 'about' | 'team' | 'privacy' | 'terms' | 'contact';
 type ToastType = 'success' | 'error';
 type SignUpStep = 'identity' | 'password' | 'username';
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,7 +107,6 @@ function LoginForm({
         return;
       }
 
-      // Ensure user row exists in Prisma
       await fetch('/api/auth/sync-user', { method: 'POST' });
 
       onNotify('Welcome back!', 'success');
@@ -168,10 +169,6 @@ function LoginForm({
     </form>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Sign-Up Form
-// ---------------------------------------------------------------------------
 
 function SignUpForm({
   onSwitchToLogin,
@@ -445,35 +442,38 @@ function SignUpForm({
 // Context + Provider
 // ---------------------------------------------------------------------------
 
-/**
- * AuthProvider holds the shared modal state and renders the modals once.
- * NavAuthButtons and HeroCTA are presentational — they trigger the shared state
- * via props passed from this provider through the children render pattern.
- */
 interface AuthContextValue {
   openLogin: () => void;
   openSignUp: () => void;
+  openAbout: () => void;
+  openTeam: () => void;
+  openPrivacy: () => void;
+  openTerms: () => void;
+  openContact: () => void;
 }
 
-const AuthContext = React.createContext<AuthContextValue>({
+const AuthContext = createContext<AuthContextValue>({
   openLogin: () => {},
   openSignUp: () => {},
+  openAbout: () => {},
+  openTeam: () => {},
+  openPrivacy: () => {},
+  openTerms: () => {},
+  openContact: () => {},
 });
 
 // ---------------------------------------------------------------------------
 // Public exports used in LandingPage
 // ---------------------------------------------------------------------------
 
-/**
- * Wraps the entire landing page to provide shared auth modal state.
- * Place this around the layout that contains both NavAuthButtons and HeroCTA.
- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<AuthView | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('success');
   const [isToastOpen, setIsToastOpen] = useState(false);
+  
   const closeModal = () => setView(null);
+  
   const handleNotify = (message: string, type: ToastType = 'error') => {
     setToastMessage(message);
     setToastType(type);
@@ -483,80 +483,193 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ openLogin: () => setView('login'), openSignUp: () => setView('signup') }}
+      value={{ 
+        openLogin: () => setView('login'), 
+        openSignUp: () => setView('signup'),
+        openAbout: () => setView('about'),
+        openTeam: () => setView('team'),
+        openPrivacy: () => setView('privacy'),
+        openTerms: () => setView('terms'),
+        openContact: () => setView('contact')
+      }}
     >
       {children}
 
-      {/* Login Modal */}
-      <Modal
-        isOpen={view === 'login'}
-        onClose={closeModal}
-        title="Welcome Back"
-        subtitle="Sign in to continue your journey"
-      >
-        <LoginForm
-          onSwitchToSignUp={() => setView('signup')}
-          onClose={closeModal}
-          onNotify={handleNotify}
-        />
+      {/* Auth Modals */}
+      <Modal isOpen={view === 'login'} onClose={closeModal} title="Welcome Back" subtitle="Sign in to continue your journey">
+        <LoginForm onSwitchToSignUp={() => setView('signup')} onClose={closeModal} onNotify={handleNotify} />
       </Modal>
 
-      {/* Sign Up Modal */}
-      <Modal
-        isOpen={view === 'signup'}
-        onClose={closeModal}
-        title="Join Lakbai"
-        subtitle="Create your free account"
-      >
-        <SignUpForm
-          onSwitchToLogin={() => setView('login')}
-          onClose={closeModal}
-          onNotify={handleNotify}
-        />
+      <Modal isOpen={view === 'signup'} onClose={closeModal} title="Join Lakbai" subtitle="Create your free account">
+        <SignUpForm onSwitchToLogin={() => setView('login')} onClose={closeModal} onNotify={handleNotify} />
       </Modal>
 
-      <Toast
-        isOpen={isToastOpen}
-        message={toastMessage}
-        type={toastType}
-        onClose={() => setIsToastOpen(false)}
-      />
+      {/* Information Modals */}
+      <Modal isOpen={view === 'about'} onClose={closeModal} title="About Lakbai" subtitle="Academic Community Project">
+        <div className="space-y-6">
+          <TextBody className="text-slate-600 leading-relaxed">
+            Lakbai is an academic community-based project focused on building an itinerary generator with a navigation planner.
+          </TextBody>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <Code2 className="text-primary-500 mb-2" size={20} />
+              <TextBody className="font-bold text-xs uppercase tracking-tight">Tech Stack</TextBody>
+              <TextBody className="text-xs text-slate-500">Next.js, TypeScript, Mapbox GL</TextBody>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <Compass className="text-orange-500 mb-2" size={20} />
+              <TextBody className="font-bold text-xs uppercase tracking-tight">Focus</TextBody>
+              <TextBody className="text-xs text-slate-500">Itinerary generator & navigation</TextBody>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Team Modal */}
+<Modal isOpen={view === 'team'} onClose={closeModal} title="The LAKBAI Team" subtitle="Academic Development Group">
+  <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4 scrollbar-hide">
+    {[
+      { name: "Johann Reuel Buere", role: "Lead Developer", img: "/team/johann.jpg" },
+      { name: "John Aries Brutas", role: "Developer", img: "/team/aries.jpg" },
+      { name: "John Benedict Del Rosario", role: "Developer", img: "/team/benedict.jpg" },
+      { name: "Christian Morga", role: "Developer", img: "/team/christian.jpg" },
+      { name: "Jaykob Perdigon", role: "Developer", img: "/team/jaykob.jpg" }
+    ].map((member) => (
+      <div key={member.name} className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl bg-white transition-all hover:border-primary-100 hover:shadow-md">
+        {/* Profile Image Container */}
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+          {member.img ? (
+            <Image
+              src={member.img}
+              alt={member.name}
+              fill
+              className="object-cover"
+              sizes="48px" 
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-slate-600 font-bold">
+              {member.name[0]}
+            </div>
+          )}
+        </div>
+        
+        <div>
+          <TextBody className="font-bold text-slate-900 leading-none mb-1">{member.name}</TextBody>
+          <TextBody className="text-[10px] text-primary-500 font-bold uppercase tracking-widest">
+            {member.role}
+          </TextBody>
+        </div>
+      </div>
+    ))}
+    
+    <div className="pt-4 border-t border-slate-100">
+      <TextBody className="text-xs text-slate-500 text-center italic">
+        Collaborative academic project by Bicol University CS Students.
+      </TextBody>
+    </div>
+  </div>
+</Modal>
+
+      {/* Contact Modal */}
+      <Modal isOpen={view === 'contact'} onClose={closeModal} title="Get in Touch" subtitle="We're here to help">
+        <div className="space-y-6">
+          <div className="flex gap-4 p-6 bg-slate-50 rounded-[2.5rem] border border-slate-100 items-center transition-all hover:border-primary-100">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-500 text-white shadow-lg shadow-primary-500/20">
+              <MessageSquare size={24} />
+            </div>
+            <div>
+              <TextBody className="font-bold text-slate-900">Project Support</TextBody>
+              <TextBody className="text-sm text-slate-500">For inquiries: lakbai.phl@gmail.com</TextBody>
+            </div>
+          </div>
+          
+          <div className="p-6 rounded-[2.5rem] bg-white border border-slate-100">
+            <TextBody className="text-sm text-slate-500 leading-relaxed text-center italic">
+              As an academic initiative, we prioritize email communication for project coordination and documentation.
+            </TextBody>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal isOpen={view === 'privacy'} onClose={closeModal} title="Privacy Policy" subtitle="Last updated: April 2026">
+        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-6 scrollbar-hide">
+          <section>
+            <TextBody className="font-bold text-slate-900 mb-2">Data Collection</TextBody>
+            <TextBody className="text-sm text-slate-600 leading-relaxed">
+              As an academic project, we collect minimal data including your username and email to manage your itineraries. Authentication is handled securely through Supabase.
+            </TextBody>
+          </section>
+          <section>
+            <TextBody className="font-bold text-slate-900 mb-2">Usage</TextBody>
+            <TextBody className="text-sm text-slate-600 leading-relaxed">
+              Your location data is only used to generate routes via Mapbox GL and is not stored permanently.
+            </TextBody>
+          </section>
+        </div>
+      </Modal>
+
+      {/* Terms of Service Modal */}
+      <Modal isOpen={view === 'terms'} onClose={closeModal} title="Terms of Service" subtitle="Academic Use Guidelines">
+        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-6 scrollbar-hide">
+          <section>
+            <TextBody className="font-bold text-slate-900 mb-2">1. Educational Purpose</TextBody>
+            <TextBody className="text-sm text-slate-600 leading-relaxed">
+              Lakbai is a community-based academic project. The itinerary generator and navigation planner are for informational purposes only.
+            </TextBody>
+          </section>
+          <section>
+            <TextBody className="font-bold text-slate-900 mb-2">2. User Conduct</TextBody>
+            <TextBody className="text-sm text-slate-600 leading-relaxed">
+              Users must follow our code of conduct, prioritizing respect and constructive engagement within the platform.
+            </TextBody>
+          </section>
+        </div>
+      </Modal>
+
+      <Toast isOpen={isToastOpen} message={toastMessage} type={toastType} onClose={() => setIsToastOpen(false)} />
     </AuthContext.Provider>
   );
 }
 
-/** Nav Login + Sign Up buttons */
+/** Nav Buttons */
 export function NavAuthButtons() {
-  const { openLogin, openSignUp } = React.useContext(AuthContext);
+  const { openLogin, openSignUp } = useContext(AuthContext);
   return (
     <div className="flex items-center gap-2 md:gap-4">
-      <button
-        id="nav-login-btn"
-        onClick={openLogin}
-        className="hover:text-primary-500 text-text-main px-3 py-2 text-sm font-semibold transition-colors md:px-4"
-      >
-        Login
-      </button>
-      <button
-        id="nav-signup-btn"
-        onClick={openSignUp}
-        className="bg-primary-500 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-lg active:scale-95 md:px-6"
-      >
-        Sign Up
-      </button>
+      <button onClick={openLogin} className="hover:text-primary-500 text-text-main px-3 py-2 text-sm font-semibold transition-colors md:px-4">Login</button>
+      <button onClick={openSignUp} className="bg-primary-500 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-lg active:scale-95 md:px-6">Sign Up</button>
     </div>
   );
 }
 
-/** Hero section CTA button */
-export function HeroCTA() {
-  const { openSignUp } = React.useContext(AuthContext);
+/** Footer Component */
+export function FooterActions() {
+  const { openAbout, openTeam, openContact } = useContext(AuthContext);
   return (
-    <button
-      id="hero-cta-btn"
-      onClick={openSignUp}
-      className="group bg-primary-500 text-background flex items-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90"
-    >
+    <div className='flex flex-col gap-3 md:text-right'>
+      <button onClick={openAbout} className='text-text-muted font-medium transition-colors hover:text-slate-900 text-left md:text-right'>About</button>
+      <button onClick={openTeam} className='text-text-muted font-medium transition-colors hover:text-slate-900 text-left md:text-right'>Team</button>
+      <button onClick={openContact} className='text-text-muted font-medium transition-colors hover:text-slate-900 text-left md:text-right'>Contact</button>
+    </div>
+  );
+}
+
+/** Legal Component */
+export function LegalActions() {
+  const { openPrivacy, openTerms } = useContext(AuthContext);
+  return (
+    <div className='flex items-center gap-4 md:gap-6'>
+      <button onClick={openPrivacy} className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'>Privacy Policy</button>
+      <button onClick={openTerms} className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'>Terms of Service</button>
+    </div>
+  );
+}
+
+export function HeroCTA() {
+  const { openSignUp } = useContext(AuthContext);
+  return (
+    <button onClick={openSignUp} className="group bg-primary-500 text-background flex items-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90">
       Start your journey
     </button>
   );

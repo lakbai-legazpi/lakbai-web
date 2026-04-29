@@ -11,7 +11,9 @@ import { GithubLogo } from '@/components/icons/GithubLogo';
 import {
   AuthProvider,
   NavAuthButtons,
-  HeroCTA
+  HeroCTA,
+  FooterActions, // Added import
+  LegalActions   // Added import
 } from '@/app/(marketing)/_components/HeroActions';
 import { createClient } from '@/lib/supabase/server';
 
@@ -135,26 +137,8 @@ export default async function LandingPage() {
                     />
                   </div>
                 </div>
-                <div className='flex flex-col gap-3 md:text-right'>
-                  <a
-                    href='#'
-                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
-                  >
-                    About
-                  </a>
-                  <a
-                    href='#'
-                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
-                  >
-                    Team
-                  </a>
-                  <a
-                    href='#'
-                    className='text-text-muted font-medium transition-colors hover:text-slate-900'
-                  >
-                    Contact
-                  </a>
-                </div>
+                {/* Implemented FooterActions here */}
+                <FooterActions />
               </div>
 
               {/* Bottom Layer */}
@@ -163,20 +147,8 @@ export default async function LandingPage() {
                   <TextBody className='text-text-muted font-medium'>
                     © 2026 Lakbai
                   </TextBody>
-                  <div className='flex items-center gap-4 md:gap-6'>
-                    <a
-                      href='#'
-                      className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
-                    >
-                      Privacy Policy
-                    </a>
-                    <a
-                      href='#'
-                      className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
-                    >
-                      Terms of Service
-                    </a>
-                  </div>
+                  {/* Implemented LegalActions here */}
+                  <LegalActions />
                 </div>
                 <div className='flex items-center gap-4'>
                   <a
