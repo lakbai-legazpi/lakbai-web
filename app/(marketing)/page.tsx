@@ -98,7 +98,7 @@ export default async function LandingPage() {
                   </TextHeading>
                   <TextBody className='text-base leading-relaxed text-slate-500'>
                     Live points of interest curated for travelers, including the
-                    best food and sights in Legazpi.
+                    best food and sights.
                   </TextBody>
                 </div>
 
