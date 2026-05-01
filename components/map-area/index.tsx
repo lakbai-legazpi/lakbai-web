@@ -22,13 +22,21 @@ type MapAreaProps = {
   isExpanded?: boolean;
   onToggleExpand?: () => void;
   overlayContainerRef?: RefObject<HTMLElement | null>;
+  overridePois?: POI[];
+  routeCoordinates?: [number, number][];
+  isRoutingActive?: boolean;
+  routeOrderMap?: Record<string, number>;
 };
 
 export default function MapArea({
   mode = 'view',
   isExpanded = false,
   onToggleExpand,
-  overlayContainerRef
+  overlayContainerRef,
+  overridePois,
+  routeCoordinates,
+  isRoutingActive = false,
+  routeOrderMap
 }: MapAreaProps) {
   const { pois, isLoading: isPoisLoading } = usePois();
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
@@ -49,11 +57,23 @@ export default function MapArea({
     'pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-primary-dark-700 bg-primary-dark-900 px-2.5 py-1.5 text-xs font-medium text-primary-dark-50 opacity-0 shadow-sm transition-opacity group-hover/map-toggle:opacity-100';
 
   const combinedPois = useMemo(() => {
+    // Routing mode: show journey POIs
+    if (isRoutingActive && overridePois) {
+      // If a POI from URL is not in journey, include it temporarily
+      if (isolatedPoi && !overridePois.some(p => p.id === isolatedPoi.id)) {
+        return [...overridePois, isolatedPoi];
+      }
+
+      return overridePois;
+    }
+
+    // Normal mode
     if (isolatedPoi && !pois.some(p => p.id === isolatedPoi.id)) {
       return [...pois, isolatedPoi];
     }
+
     return pois;
-  }, [pois, isolatedPoi]);
+  }, [pois, isolatedPoi, overridePois, isRoutingActive]);
 
   const selectedPoi = useMemo(
     () => combinedPois.find(poi => poi.id === selectedPoiId) ?? null,
@@ -196,9 +216,12 @@ export default function MapArea({
       )}
       <PoiMapCanvas
         pois={combinedPois}
+        routeOrderMap={routeOrderMap}
         mapRef={isContribute ? mapRef : undefined}
         selectedPoiId={selectedPoiId}
         onMarkerClick={poi => handleOpenPoi(poi.id)}
+        routeCoordinates={routeCoordinates}
+        isRoutingActive={isRoutingActive}
         mapClassName={
           isContribute && isAddLocationMode
             ? '[&_.maplibregl-canvas]:cursor-crosshair'
