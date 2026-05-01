@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+
+### Added
+
+- Journey itinerary panel with day-based grouping
+- Route visualization between POIs on map
+- Ordered markers reflecting itinerary sequence
+
+
 ### Added
 
 - Journey card component displaying title, location, and duration
