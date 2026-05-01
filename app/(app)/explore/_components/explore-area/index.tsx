@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronLeft,
@@ -28,6 +28,15 @@ const SPOTS_CLUSTERS = new Set(['attractions', 'nature', 'malls']);
 const EATS_CLUSTERS = new Set(['food', 'eats']);
 const LODGING_CLUSTERS = new Set(['accomodations', 'accommodations']);
 const MAX_FOR_YOU_ITEMS = 8;
+const budgetFilterOptions = [
+  { value: 'all', label: 'All budgets' },
+  { value: 1, label: 'Budget' },
+  { value: 2, label: 'Moderate' },
+  { value: 3, label: 'Expensive' },
+  { value: 4, label: 'Luxury' }
+] as const;
+
+type BudgetFilter = (typeof budgetFilterOptions)[number]['value'];
 
 function shuffle<T>(items: T[]): T[] {
   const cloned = [...items];
@@ -56,7 +65,7 @@ function normalizePoi(poi: Partial<POI>): POI {
     phoneNumber: (poi as any).phoneNumber ?? null,
     email: (poi as any).email ?? null,
     links: (poi as any).links ?? [],
-    reviews: (poi as any).reviews ?? [],
+    reviews: (poi as any).reviews ?? []
   };
 }
 
@@ -92,10 +101,16 @@ function buildForYou(pois: POI[]): POI[] {
   return [...picks, ...remaining].slice(0, MAX_FOR_YOU_ITEMS);
 }
 
+function formatBudgetLabel(level?: number | null): string {
+  if (!level || level < 1) return '';
+  return '₱'.repeat(Math.min(level, 4));
+}
+
 export default function ExploreArea() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const budgetMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [activeCategory, setActiveCategory] =
     useState<ExploreCategory>('For You');
@@ -105,6 +120,22 @@ export default function ExploreArea() {
   const [error, setError] = useState<string | null>(null);
   const [imageIndices, setImageIndices] = useState<Record<string, number>>({});
   const [forYouNonce, setForYouNonce] = useState(0);
+  const [selectedBudget, setSelectedBudget] = useState<BudgetFilter>('all');
+  const [isBudgetMenuOpen, setIsBudgetMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        budgetMenuRef.current &&
+        !budgetMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsBudgetMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
 
   useEffect(() => {
     const loadPois = async () => {
@@ -155,26 +186,34 @@ export default function ExploreArea() {
     });
   }, [pois, searchText]);
 
+  const budgetFilteredPois = useMemo(() => {
+    if (selectedBudget === 'all') {
+      return searchedPois;
+    }
+
+    return searchedPois.filter(poi => poi.priceLevel === selectedBudget);
+  }, [searchedPois, selectedBudget]);
+
   const visiblePois = useMemo(() => {
     switch (activeCategory) {
       case 'For You':
-        return buildForYou(searchedPois);
+        return buildForYou(budgetFilteredPois);
       case 'Spots':
-        return searchedPois.filter(poi =>
+        return budgetFilteredPois.filter(poi =>
           SPOTS_CLUSTERS.has(getClusterKey(poi))
         );
       case 'Eats':
-        return searchedPois.filter(poi =>
+        return budgetFilteredPois.filter(poi =>
           EATS_CLUSTERS.has(getClusterKey(poi))
         );
       case 'Lodgings':
-        return searchedPois.filter(poi =>
+        return budgetFilteredPois.filter(poi =>
           LODGING_CLUSTERS.has(getClusterKey(poi))
         );
       default:
-        return searchedPois;
+        return budgetFilteredPois;
     }
-  }, [activeCategory, searchedPois, forYouNonce]);
+  }, [activeCategory, budgetFilteredPois, forYouNonce]);
 
   const updateImageIndex = (poiId: string, nextIndex: number) => {
     setImageIndices(prev => ({
@@ -191,6 +230,10 @@ export default function ExploreArea() {
     const nextPath = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     router.replace(nextPath, { scroll: false });
   };
+
+  const selectedBudgetLabel =
+    budgetFilterOptions.find(option => option.value === selectedBudget)
+      ?.label ?? 'All budgets';
 
   return (
     <div className='scrollbar-invisible bg-surface text-text-main h-full w-full overflow-y-auto'>
@@ -210,14 +253,55 @@ export default function ExploreArea() {
             />
           </div>
 
-          <button
-            type='button'
-            className='border-border text-text-main hover:bg-surface-light bg-background inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-medium transition'
-          >
-            <SlidersHorizontal className='h-4 w-4' />
-            Filters
-          </button>
+          <div ref={budgetMenuRef} className='relative'>
+            <button
+              type='button'
+              onClick={() => setIsBudgetMenuOpen(prev => !prev)}
+              aria-expanded={isBudgetMenuOpen}
+              className='border-border text-text-main hover:bg-surface-light bg-background inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-medium transition'
+            >
+              <SlidersHorizontal className='h-4 w-4' />
+              {selectedBudget === 'all'
+                ? 'Filters'
+                : `Budget: ${formatBudgetLabel(selectedBudget)}`}
+            </button>
+
+            {isBudgetMenuOpen && (
+              <div className='bg-background border-border absolute top-full right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border shadow-lg'>
+                <div className='py-1'>
+                  {budgetFilterOptions.map(option => (
+                    <button
+                      key={option.label}
+                      type='button'
+                      onClick={() => {
+                        setSelectedBudget(option.value);
+                        setIsBudgetMenuOpen(false);
+                      }}
+                      className={cn(
+                        'text-text-main hover:bg-surface-light flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition',
+                        selectedBudget === option.value &&
+                          'bg-primary-50 text-primary-600'
+                      )}
+                    >
+                      <span>{option.label}</span>
+                      {option.value !== 'all' && (
+                        <span className='text-xs font-medium'>
+                          {formatBudgetLabel(option.value)}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {selectedBudget !== 'all' && (
+          <div className='text-text-muted mb-4 text-sm'>
+            Showing {selectedBudgetLabel} POIs only.
+          </div>
+        )}
 
         <div className='mb-7 flex flex-wrap items-center gap-2.5'>
           {categories.map(category => {
@@ -283,6 +367,17 @@ export default function ExploreArea() {
                   poi.primaryTagId
                 );
                 const { color } = getTagVisual(primaryTag);
+                const reviews = poi.reviews ?? [];
+                const averageRating =
+                  reviews.length > 0
+                    ? (
+                        reviews.reduce(
+                          (total, review) => total + review.rating,
+                          0
+                        ) / reviews.length
+                      ).toFixed(1)
+                    : 'New';
+                const reviewCount = reviews.length;
                 const detailAddress = poi.address
                   ? [poi.address.cityMunicipality, poi.address.province]
                       .filter(Boolean)
@@ -322,11 +417,11 @@ export default function ExploreArea() {
                       <div className='pointer-events-none absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent' />
 
                       <div className='absolute top-3 right-3 z-10 flex items-center gap-2'>
-                        <PoiActionButtons 
+                        <PoiActionButtons
                           poiId={poi.id}
                           initialVouchCount={poi.vouchCount ?? 0}
-                          layout="compact"
-                          buttonClassName="border-0 bg-black/30 text-white hover:text-white hover:bg-black/50 backdrop-blur-md px-2"
+                          layout='compact'
+                          buttonClassName='border-0 bg-black/30 text-white hover:text-white hover:bg-black/50 backdrop-blur-md px-2'
                         />
                       </div>
 
@@ -388,9 +483,9 @@ export default function ExploreArea() {
 
                         <p className='text-text-main mt-1 inline-flex shrink-0 items-center gap-1 text-sm font-semibold'>
                           <Star className='h-3.5 w-3.5 fill-current' />
-                          4.6{' '}
+                          {averageRating}{' '}
                           <span className='text-text-muted'>
-                            ({poi.vouchCount})
+                            ({reviewCount} reviews)
                           </span>
                         </p>
                       </div>

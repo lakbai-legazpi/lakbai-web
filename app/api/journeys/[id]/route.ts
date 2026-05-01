@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 
 type UpdateJourneyBody = {
+  title?: string;
   startDate?: string | null;
   endDate?: string | null;
   isFlexibleDates?: boolean;
@@ -43,6 +44,7 @@ export async function PATCH(
     }
 
     const data: {
+      title?: string;
       startDate?: Date | null;
       endDate?: Date | null;
       isFlexibleDates?: boolean;
@@ -52,6 +54,7 @@ export async function PATCH(
       budget?: number | null;
     } = {};
 
+    if ('title' in body && body.title?.trim()) data.title = body.title.trim();
     if ('startDate' in body) data.startDate = body.startDate ? new Date(body.startDate) : null;
     if ('endDate' in body) data.endDate = body.endDate ? new Date(body.endDate) : null;
     if ('isFlexibleDates' in body) data.isFlexibleDates = body.isFlexibleDates;
@@ -144,6 +147,51 @@ export async function PATCH(
     console.error('Failed to update journey', error);
     return NextResponse.json(
       { error: 'Failed to update journey.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    if (!id?.trim()) {
+      return NextResponse.json({ error: 'Missing journeyId.' }, { status: 400 });
+    }
+
+    const existingJourney = await prisma.journey.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+
+    if (!existingJourney) {
+      return NextResponse.json({ error: 'Journey not found.' }, { status: 404 });
+    }
+
+    if (existingJourney.userId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await prisma.journey.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete journey', error);
+    return NextResponse.json(
+      { error: 'Failed to delete journey.' },
       { status: 500 }
     );
   }
