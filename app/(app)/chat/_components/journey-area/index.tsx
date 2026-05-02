@@ -49,6 +49,13 @@ interface JourneyAreaJourneyDay {
   title: string | null;
 }
 
+interface LinkedChat {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JourneyAreaJourney {
   id: string;
   title: string;
@@ -63,6 +70,7 @@ export interface JourneyAreaJourney {
   budget: number | null;
   itineraryItems: JourneyAreaItineraryItem[];
   days: JourneyAreaJourneyDay[];
+  chats?: LinkedChat[];
 }
 
 type JourneyAreaProps = {
@@ -729,6 +737,43 @@ export default function JourneyArea({
       {/* Journey Content - Wrapped in DragDropContext */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className='flex-1 overflow-y-auto px-6 py-6'>
+          {/* Connected Chats Section */}
+          {journey?.chats && journey.chats.length > 0 && (
+            <div className='group mb-8'>
+              <div className='mb-3 flex items-center justify-between'>
+                <div className='flex items-center'>
+                  <TextBody className='text-foreground text-[15px] font-bold'>
+                    Connected Chats
+                  </TextBody>
+                  <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
+                    {journey.chats.length} chat
+                    {journey.chats.length !== 1 ? 's' : ''}
+                  </TextBody>
+                </div>
+              </div>
+              <div className='space-y-2'>
+                {journey.chats.map(chat => (
+                  <a
+                    key={chat.id}
+                    href={`/chat/${chat.id}`}
+                    className='border-border bg-primary-50 hover:bg-primary-100 dark:bg-primary-900 dark:hover:bg-primary-800 flex items-center justify-between rounded-lg border px-4 py-2 transition-colors'
+                  >
+                    <div className='min-w-0 flex-1'>
+                      <TextBody className='text-text-main truncate text-[14px] font-medium'>
+                        {chat.title}
+                      </TextBody>
+                      <TextBody className='text-text-muted text-xs'>
+                        {new Date(chat.createdAt).toLocaleDateString()}
+                      </TextBody>
+                    </div>
+                    <span className='text-text-main ml-2 text-sm'>→</span>
+                  </a>
+                ))}
+              </div>
+              <div className='border-border my-6 border-b'></div>
+            </div>
+          )}
+
           {/* Basecamp Section */}
           <div className='group mb-8'>
             <div className='mb-3 flex items-center justify-between'>

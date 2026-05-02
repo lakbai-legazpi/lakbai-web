@@ -11,6 +11,7 @@ export type JourneyCardJourney = {
   startDate: Date | string | null;
   endDate: Date | string | null;
   createdAt: Date | string;
+  coverImageUrl?: string | null;
 };
 
 type JourneyCardProps = {
@@ -52,13 +53,25 @@ export default function JourneyCard({
     daysText = `${diffDays || 1} day${diffDays > 1 ? 's' : ''}`;
   }
 
+  const coverImageUrl = journey.coverImageUrl?.trim();
+
   return (
     <div className='group bg-surface-200 border-border relative h-55 w-full overflow-hidden rounded-[24px] border transition-all hover:shadow-md sm:h-65 md:h-75 lg:h-87.5 lg:w-112.5'>
-      {/* Placeholder background gradient */}
-      <div className='absolute inset-0 bg-linear-to-br from-slate-200 to-slate-300' />
+      <div className='absolute inset-0'>
+        {coverImageUrl ? (
+          <img
+            src={coverImageUrl}
+            alt={journey.title}
+            className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+            loading='lazy'
+          />
+        ) : (
+          <div className='absolute inset-0 bg-linear-to-br from-slate-200 via-slate-300 to-slate-400' />
+        )}
+      </div>
 
       {/* Gradient overlay for text readability */}
-      <div className='absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-90' />
+      <div className='absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent opacity-95' />
 
       <div className='absolute top-4 left-4 z-20'>
         <button

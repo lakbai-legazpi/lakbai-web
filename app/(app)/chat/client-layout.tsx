@@ -49,11 +49,16 @@ export default function ChatClientLayout({
   }, [chatId, initialChats, router]);
 
   const triggerNewJourneyModal = () => {
-    window.dispatchEvent(new CustomEvent('open-new-journey-modal', { detail: { chatId } }));
+    window.dispatchEvent(
+      new CustomEvent('open-new-journey-modal', { detail: { chatId } })
+    );
   };
 
   return (
-    <div ref={containerRef} className='relative flex h-full w-full overflow-hidden'>
+    <div
+      ref={containerRef}
+      className='relative flex h-full w-full overflow-hidden'
+    >
       {/* LEFT: Chatbox (Full fixed width or percentage) */}
       <div
         className={cn(
@@ -63,7 +68,10 @@ export default function ChatClientLayout({
             : 'w-1/2 border-r opacity-100'
         )}
       >
-        <Chatbox onOpenNewJourneyModal={triggerNewJourneyModal} />
+        <Chatbox
+          onOpenNewJourneyModal={triggerNewJourneyModal}
+          initialJourneys={initialJourneys}
+        />
       </div>
 
       {/* RIGHT: MapArea */}

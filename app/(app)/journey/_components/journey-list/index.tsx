@@ -6,6 +6,7 @@ import { BadgePlus, Check, Luggage, Trash2 } from 'lucide-react';
 import { TextHeading, TextBody } from '@/components/text';
 import JourneyCard, { type JourneyCardJourney } from '../journey-card';
 import NewJourneyModal from '../../../_components/NewJourneyModal';
+import Notification from '../../../_components/Notificaiton';
 
 export default function JourneyList({
   initialJourneys
@@ -20,6 +21,8 @@ export default function JourneyList({
     new Set()
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmationJourneyIds, setDeleteConfirmationJourneyIds] =
+    useState<string[] | null>(null);
 
   useEffect(() => {
     setJourneys(initialJourneys);
@@ -27,6 +30,7 @@ export default function JourneyList({
   }, [initialJourneys]);
 
   const selectedCount = selectedJourneyIds.size;
+  const deleteConfirmationCount = deleteConfirmationJourneyIds?.length ?? 0;
 
   const toggleJourneySelection = (journeyId: string) => {
     setSelectedJourneyIds(prev => {
@@ -79,21 +83,18 @@ export default function JourneyList({
     }
   };
 
+  const requestDeleteJourneys = (journeyIds: string[]) => {
+    if (journeyIds.length === 0) return;
+
+    setDeleteConfirmationJourneyIds(journeyIds);
+  };
+
   const deleteJourneys = async (journeyIds: string[]) => {
     if (journeyIds.length === 0) return;
 
     setIsDeleting(true);
 
     try {
-      const confirmed =
-        journeyIds.length === 1
-          ? window.confirm('Delete this journey?')
-          : window.confirm(`Delete ${journeyIds.length} journeys?`);
-
-      if (!confirmed) {
-        return;
-      }
-
       const responses = await Promise.all(
         journeyIds.map(id => fetch(`/api/journeys/${id}`, { method: 'DELETE' }))
       );
@@ -115,15 +116,22 @@ export default function JourneyList({
       window.alert('Failed to delete journeys.');
     } finally {
       setIsDeleting(false);
+      setDeleteConfirmationJourneyIds(null);
     }
   };
 
   const handleDeleteJourney = async (journey: JourneyCardJourney) => {
-    await deleteJourneys([journey.id]);
+    requestDeleteJourneys([journey.id]);
   };
 
-  const handleDeleteSelected = async () => {
-    await deleteJourneys(Array.from(selectedJourneyIds));
+  const handleDeleteSelected = () => {
+    requestDeleteJourneys(Array.from(selectedJourneyIds));
+  };
+
+  const handleConfirmDeleteJourneys = async () => {
+    if (!deleteConfirmationJourneyIds) return;
+
+    await deleteJourneys(deleteConfirmationJourneyIds);
   };
 
   const handleModalSubmit = async (newJourneyData: any) => {
@@ -271,6 +279,28 @@ export default function JourneyList({
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleModalSubmit}
+      />
+
+      <Notification
+        type='delete-confirmation'
+        isOpen={deleteConfirmationJourneyIds !== null}
+        onCancel={() => setDeleteConfirmationJourneyIds(null)}
+        onConfirm={handleConfirmDeleteJourneys}
+        isLoading={isDeleting}
+        title={
+          deleteConfirmationCount === 1
+            ? 'Delete journey?'
+            : `Delete ${deleteConfirmationCount} journeys?`
+        }
+        description={
+          deleteConfirmationCount === 1
+            ? 'This action cannot be undone.'
+            : 'These journeys will be removed permanently.'
+        }
+        confirmLabel={
+          deleteConfirmationCount === 1 ? 'Delete' : 'Delete selected'
+        }
+        confirmLoadingLabel='Deleting...'
       />
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import JourneyArea from '../journey-area';
+import { JourneyPickerModal } from '../JourneyPickerModal';
 import {
   Luggage,
   Share,
@@ -15,16 +16,22 @@ import {
 } from 'lucide-react';
 import { TextBody } from '@/components/text';
 import Notification, { Toast } from '../../../_components/Notificaiton';
-import { createBlankChat } from '@/lib/chat-api';
+import { createBlankChat, attachJourneyToChat } from '@/lib/chat-api';
 
 type ChatboxProps = {
   onOpenNewJourneyModal?: () => void;
+  initialJourneys?: any[];
 };
 
-export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
+export default function Chatbox({
+  onOpenNewJourneyModal,
+  initialJourneys = []
+}: ChatboxProps) {
   const [message, setMessage] = useState('');
   const [journeyOpen, setJourneyOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [journeyPickerOpen, setJourneyPickerOpen] = useState(false);
+  const [isAttachingJourney, setIsAttachingJourney] = useState(false);
 
   const [chat, setChat] = useState<any>(null);
   const [journey, setJourney] = useState<any>(null);
@@ -180,6 +187,34 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
     }
   };
 
+  const handleAttachJourney = async (journeyId: string) => {
+    if (!chat?.id) return;
+    setIsAttachingJourney(true);
+    try {
+      const result = await attachJourneyToChat(chat.id, journeyId);
+      if (result) {
+        setChat(result.chat);
+        setJourney(result.journey);
+        setJourneyPickerOpen(false);
+        setToast({
+          message: `Chat connected to "${result.journey.title}"`,
+          type: 'success'
+        });
+        // Fetch updated messages
+        const res = await fetch(`/api/chat?id=${chat.id}`);
+        const data = await res.json();
+        if (data.chat) {
+          setMessages(data.chat.messages || []);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setToast({ message: 'Failed to attach journey', type: 'error' });
+    } finally {
+      setIsAttachingJourney(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim() || !chat) return;
 
@@ -231,15 +266,33 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             {isBlankJourney ? (
-              <button
-                onClick={() => onOpenNewJourneyModal?.()}
-                className='border-text-muted bg-primary-600 hover:bg-primary-700 flex items-center gap-2 rounded-full border py-[6px] pr-4 pl-4 shadow-sm transition-colors'
-              >
-                <Luggage size={18} strokeWidth={2} className='text-white' />
-                <span className='text-[15px] font-medium text-white'>
-                  Create a Journey
-                </span>
-              </button>
+              <div className='flex items-center gap-2'>
+                <button
+                  onClick={() => onOpenNewJourneyModal?.()}
+                  className='border-text-muted bg-primary-600 hover:bg-primary-700 flex items-center gap-2 rounded-full border py-[6px] pr-4 pl-4 shadow-sm transition-colors'
+                >
+                  <Luggage size={18} strokeWidth={2} className='text-white' />
+                  <span className='text-[15px] font-medium text-white'>
+                    Create Journey
+                  </span>
+                </button>
+                {initialJourneys.length > 0 && (
+                  <button
+                    onClick={() => setJourneyPickerOpen(true)}
+                    disabled={isAttachingJourney}
+                    className='border-text-muted bg-background hover:bg-surface flex items-center gap-2 rounded-full border py-[6px] pr-4 pl-4 shadow-sm transition-colors disabled:opacity-50'
+                  >
+                    <Luggage
+                      size={18}
+                      strokeWidth={2}
+                      className='text-text-main'
+                    />
+                    <span className='text-text-main text-[15px] font-medium'>
+                      Attach Journey
+                    </span>
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={() => setJourneyOpen(true)}
@@ -380,6 +433,18 @@ export default function Chatbox({ onOpenNewJourneyModal }: ChatboxProps) {
           journey={journey}
         />
       )}
+
+      <JourneyPickerModal
+        open={journeyPickerOpen}
+        journeys={initialJourneys}
+        onClose={() => setJourneyPickerOpen(false)}
+        onSelectJourney={handleAttachJourney}
+        onCreateNewJourney={() => {
+          setJourneyPickerOpen(false);
+          onOpenNewJourneyModal?.();
+        }}
+        isSubmitting={isAttachingJourney}
+      />
 
       <Notification
         type='rename-confirmation'

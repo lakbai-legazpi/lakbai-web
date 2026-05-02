@@ -46,6 +46,29 @@ export async function createJourneyChat(newJourneyData: {
   }
 }
 
+export async function attachJourneyToChat(
+  chatId: string,
+  journeyId: string
+): Promise<{ chat: any; journey: any } | null> {
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isNewContext: true,
+        chatId,
+        attachJourneyId: journeyId
+      })
+    });
+
+    const data = await res.json();
+    return data.chat ? data : null;
+  } catch (e) {
+    console.error('[attachJourneyToChat] Failed:', e);
+    return null;
+  }
+}
+
 export async function linkJourneyToChat(chatId: string, newJourneyData: {
   destination: string;
   companions?: string;

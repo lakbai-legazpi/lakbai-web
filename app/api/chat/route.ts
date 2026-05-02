@@ -62,6 +62,50 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         });
       }
 
+      // Attach existing journey to blank chat
+      if (body.attachJourneyId && body.chatId) {
+        // Verify both chat and journey belong to the current user
+        const targetChat = await prisma.chat.findUnique({
+          where: { id: body.chatId },
+          include: { messages: { orderBy: { createdAt: 'asc' } } }
+        });
+
+        if (!targetChat || targetChat.userId !== user?.id) {
+          return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
+        }
+
+        const targetJourney = await prisma.journey.findUnique({
+          where: { id: body.attachJourneyId },
+          include: {
+            itineraryItems: { include: { poi: { include: { tags: { include: { cluster: true } } } } } },
+            chats: { select: { id: true, title: true, createdAt: true, updatedAt: true } }
+          }
+        });
+
+        if (!targetJourney || targetJourney.userId !== user?.id) {
+          return NextResponse.json({ error: "Journey not found or unauthorized" }, { status: 404 });
+        }
+
+        // Update chat to link to journey
+        chat = await prisma.chat.update({
+          where: { id: body.chatId },
+          data: {
+            journeyId: body.attachJourneyId,
+            title: targetJourney.title
+          },
+          include: { messages: { orderBy: { createdAt: 'asc' } } }
+        });
+
+        journey = targetJourney;
+
+        // Return the linked state
+        return NextResponse.json({
+          chat: { ...chat },
+          journey: { ...journey },
+          aiText: `Great! I've connected this chat to "${targetJourney.title}". We can continue planning from here!`
+        });
+      }
+
       // Traditional parameters flow via explicit newJourneyData constraints
       if (newJourneyData) {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
@@ -351,6 +395,10 @@ export async function GET(request: Request) {
             itineraryItems: {
               include: { poi: { include: { tags: { include: { cluster: true } } } } },
               orderBy: [{ dayNumber: 'asc' }, { startTime: 'asc' }, { orderIndex: 'asc' }]
+            },
+            chats: {
+              where: { id: { not: chat.id } }, // Exclude current chat
+              select: { id: true, title: true, createdAt: true, updatedAt: true }
             }
           }
         })

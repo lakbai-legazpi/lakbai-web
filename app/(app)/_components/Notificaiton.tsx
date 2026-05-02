@@ -13,6 +13,12 @@ interface NotificationProps {
   onConfirm: (value?: string) => void | Promise<void>;
   isLoading?: boolean;
   initialValue?: string;
+  title?: string;
+  description?: string;
+  cancelLabel?: string;
+  confirmLabel?: string;
+  confirmLoadingLabel?: string;
+  inputPlaceholder?: string;
 }
 
 interface NotificationConfig {
@@ -48,7 +54,13 @@ export default function Notification({
   onCancel,
   onConfirm,
   isLoading = false,
-  initialValue = ''
+  initialValue = '',
+  title,
+  description,
+  cancelLabel,
+  confirmLabel,
+  confirmLoadingLabel,
+  inputPlaceholder
 }: NotificationProps) {
   const [inputValue, setInputValue] = useState(initialValue);
 
@@ -62,6 +74,13 @@ export default function Notification({
 
   const config = notificationConfigs[type];
   const isRenameType = type === 'rename-confirmation';
+  const resolvedTitle = title ?? config.title;
+  const resolvedDescription = description ?? config.description;
+  const resolvedCancelLabel = cancelLabel ?? config.cancelLabel;
+  const resolvedConfirmLabel = confirmLabel ?? config.confirmLabel;
+  const resolvedConfirmLoadingLabel =
+    confirmLoadingLabel ?? config.confirmLoadingLabel;
+  const resolvedInputPlaceholder = inputPlaceholder ?? config.inputPlaceholder;
 
   const handleConfirm = async () => {
     if (isRenameType) {
@@ -84,9 +103,9 @@ export default function Notification({
         {/* Header */}
         <div className='border-border relative border-b px-6 py-4'>
           <h2 className='text-text-main text-lg font-semibold'>
-            {config.title}
+            {resolvedTitle}
           </h2>
-          <p className='text-text-muted mt-1 text-sm'>{config.description}</p>
+          <p className='text-text-muted mt-1 text-sm'>{resolvedDescription}</p>
           <button
             onClick={onCancel}
             className='hover:bg-surface absolute top-4 right-4 rounded-md p-1 transition-colors'
@@ -103,7 +122,7 @@ export default function Notification({
               type='text'
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              placeholder={config.inputPlaceholder}
+              placeholder={resolvedInputPlaceholder}
               className='bg-surface border-border placeholder:text-text-muted text-text-main focus:border-primary-500 w-full rounded-lg border px-4 py-2 text-sm outline-none'
               disabled={isLoading}
               autoFocus
@@ -118,14 +137,14 @@ export default function Notification({
             className='border-border text-text-main hover:bg-surface flex-1 rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
             disabled={isLoading}
           >
-            {config.cancelLabel}
+            {resolvedCancelLabel}
           </button>
           <button
             onClick={handleConfirm}
             className='bg-primary-500 hover:bg-primary-600 flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50'
             disabled={isLoading || (isRenameType && !inputValue.trim())}
           >
-            {isLoading ? config.confirmLoadingLabel : config.confirmLabel}
+            {isLoading ? resolvedConfirmLoadingLabel : resolvedConfirmLabel}
           </button>
         </div>
       </div>
@@ -152,7 +171,7 @@ export function Toast({
   if (!isOpen) return null;
 
   return (
-    <div className='animate-in fade-in slide-in-from-top-4 fixed top-8 left-1/2 z-[9999] -translate-x-1/2 duration-300'>
+    <div className='animate-in fade-in slide-in-from-top-4 fixed top-8 left-1/2 z-9999 -translate-x-1/2 duration-300'>
       <div
         className={`rounded-lg px-6 py-3 text-sm font-medium shadow-lg ${
           type === 'success'
