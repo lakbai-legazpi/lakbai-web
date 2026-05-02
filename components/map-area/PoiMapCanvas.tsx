@@ -9,6 +9,7 @@ import {
   MarkerContent,
   MarkerPopup,
   MarkerHoverPopup,
+  MapRoute,
   type MapRef
 } from '@/components/ui/map';
 import { cn } from '@/lib/cn';
@@ -28,6 +29,9 @@ type PoiMapCanvasProps = {
   markerCircleClassName?: string;
   showControls?: boolean;
   selectedPoiId?: string | null;
+  routeCoordinates?: [number, number][];
+  isRoutingActive?: boolean;
+  routeOrderMap?: Record<string, number>;
   onMarkerClick?: (poi: POI) => void;
   renderPopup?: (poi: POI) => ReactNode;
   renderHoverPopup?: (poi: POI) => ReactNode;
@@ -37,6 +41,9 @@ export default function PoiMapCanvas({
   pois,
   center,
   zoom = 12,
+  routeCoordinates,
+  isRoutingActive = false,
+  routeOrderMap,
   mapRef,
   mapClassName,
   controlsClassName,
@@ -63,6 +70,15 @@ export default function PoiMapCanvas({
       theme='light'
       styles={{ light: MAP_LIGHT_STYLE_URL }}
     >
+      {isRoutingActive && routeCoordinates && (
+        <MapRoute
+          coordinates={routeCoordinates}
+          color='#6366f1'
+          width={5}
+          opacity={0.9}
+        />
+      )}
+
       {showControls && <MapControls className={controlsClassName} />}
 
       {pois.map(poi => {
@@ -92,7 +108,13 @@ export default function PoiMapCanvas({
                   isSelected && 'ring-primary-500 ring-2 ring-offset-1'
                 )}
               >
-                <Icon className='h-4 w-4 text-white' />
+                {isRoutingActive ? (
+                  <span className='text-xs font-bold text-white'>
+                    {routeOrderMap?.[poi.id] ?? ''}
+                  </span>
+                ) : (
+                  <Icon className='h-4 w-4 text-white' />
+                )}
               </div>
             </MarkerContent>
 
