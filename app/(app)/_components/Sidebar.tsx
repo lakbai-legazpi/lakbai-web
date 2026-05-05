@@ -18,12 +18,14 @@ import {
   ChevronRight,
   LogOut
 } from 'lucide-react';
+import { UserAvatar } from '@/components/UserAvatar';
 
 type UserProfile = {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
-  avatarUrl: string | null;
+  avatarSeed: string | null;
+  avatarOptions: any;
 };
 
 export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
@@ -479,7 +481,15 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
                 : 'w-full rounded-lg p-2'
             )}
           >
-            <UserCircle size={24} className='shrink-0' />
+            {userProfile ? (
+              <UserAvatar 
+                seed={userProfile.avatarSeed} 
+                options={userProfile.avatarOptions} 
+                className={cn('h-6 w-6 shrink-0', !isCollapsed && 'h-8 w-8')} 
+              />
+            ) : (
+              <UserCircle size={24} className='shrink-0' />
+            )}
             <div
               className={cn(
                 'flex flex-col items-start overflow-hidden transition-all duration-300',

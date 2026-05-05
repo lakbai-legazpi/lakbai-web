@@ -35,7 +35,8 @@ export async function GET(request: Request) {
                                 name: true,
                                 firstName: true,
                                 lastName: true,
-                                avatarUrl: true,
+                                avatarSeed: true,
+                                avatarOptions: true,
                             }
                         }
                     },

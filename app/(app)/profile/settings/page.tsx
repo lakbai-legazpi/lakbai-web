@@ -21,7 +21,8 @@ export default async function ProfileSettingsPage() {
       firstName: true,
       lastName: true,
       username: true,
-      avatarUrl: true,
+      avatarSeed: true,
+      avatarOptions: true,
       location: true,
       bio: true,
       facebookUrl: true,
@@ -35,5 +36,5 @@ export default async function ProfileSettingsPage() {
     redirect('/chat');
   }
 
-  return <EditProfileSettings profile={{ ...profile, username: profile.username || '' }} />;
+  return <EditProfileSettings profile={{ ...profile, username: profile.username || '', avatarOptions: profile.avatarOptions || {} }} />;
 }

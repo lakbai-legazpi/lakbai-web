@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { getRandomSeed } from '@/lib/avatars';
 
 function toUsernameSlug(value: string): string {
   const slug = value
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
         firstName: firstName ?? null,
         lastName: lastName ?? null,
         username: resolvedUsername,
-        avatarUrl: user.user_metadata?.avatar_url ?? null,
+        avatarSeed: getRandomSeed(),
       },
       update: {
         email: user.email!,
@@ -88,7 +89,6 @@ export async function GET(request: Request) {
         firstName: firstName ?? null,
         lastName: lastName ?? null,
         username: resolvedUsername,
-        ...(user.user_metadata?.avatar_url && { avatarUrl: user.user_metadata.avatar_url }),
       },
     });
   }

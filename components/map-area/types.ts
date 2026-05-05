@@ -31,7 +31,8 @@ export type POIReview = {
     name: string | null;
     firstName: string | null;
     lastName: string | null;
-    avatarUrl: string | null;
+    avatarSeed: string | null;
+    avatarOptions: any;
   };
 };
 

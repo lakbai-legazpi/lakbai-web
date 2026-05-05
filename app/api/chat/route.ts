@@ -119,20 +119,16 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               companions: newJourneyData.companions,
               preferences: newJourneyData.preferences,
               budget: newJourneyData.budget ?? null,
-              startDate: newJourneyData.dates?.isFlexible
-                ? null
-                : newJourneyData.dates?.from
-                  ? new Date(newJourneyData.dates.from)
-                  : null,
-              endDate: newJourneyData.dates?.isFlexible
-                ? null
-                : newJourneyData.dates?.to
-                  ? new Date(newJourneyData.dates.to)
-                  : null,
+              startDate: newJourneyData.dates?.from
+                ? new Date(newJourneyData.dates.from)
+                : null,
+              endDate: newJourneyData.dates?.to
+                ? new Date(newJourneyData.dates.to)
+                : null,
               isFlexibleDates: newJourneyData.dates?.isFlexible || false,
-              flexibleDays: newJourneyData.dates?.isFlexible ? newJourneyData.dates.days : null,
-              flexibleMonths: newJourneyData.dates?.isFlexible && newJourneyData.dates.months 
-                ? JSON.stringify(newJourneyData.dates.months) 
+              flexibleDays: newJourneyData.dates?.days ?? 5,
+              flexibleMonths: newJourneyData.dates?.months
+                ? JSON.stringify(newJourneyData.dates.months)
                 : null,
               userId: user?.id ?? null,
               days: {
@@ -166,20 +162,16 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               companions: newJourneyData.companions,
               preferences: newJourneyData.preferences,
               budget: newJourneyData.budget ?? null,
-              startDate: newJourneyData.dates?.isFlexible
-                ? null
-                : newJourneyData.dates?.from
-                  ? new Date(newJourneyData.dates.from)
-                  : null,
-              endDate: newJourneyData.dates?.isFlexible
-                ? null
-                : newJourneyData.dates?.to
-                  ? new Date(newJourneyData.dates.to)
-                  : null,
+              startDate: newJourneyData.dates?.from
+                ? new Date(newJourneyData.dates.from)
+                : null,
+              endDate: newJourneyData.dates?.to
+                ? new Date(newJourneyData.dates.to)
+                : null,
               isFlexibleDates: newJourneyData.dates?.isFlexible || false,
-              flexibleDays: newJourneyData.dates?.isFlexible ? newJourneyData.dates.days : null,
-              flexibleMonths: newJourneyData.dates?.isFlexible && newJourneyData.dates.months 
-                ? JSON.stringify(newJourneyData.dates.months) 
+              flexibleDays: newJourneyData.dates?.days ?? 5,
+              flexibleMonths: newJourneyData.dates?.months
+                ? JSON.stringify(newJourneyData.dates.months)
                 : null,
               userId: user?.id ?? null,
               days: {

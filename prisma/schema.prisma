@@ -21,7 +21,6 @@ model User {
   tiktokUrl     String?
   username      String?        @unique
   youtubeUrl    String?
-  avatarUrl     String?
   avatarOptions Json?
   avatarSeed    String?
   chats         Chat[]

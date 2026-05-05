@@ -110,7 +110,7 @@ export function JourneyPickerModal({
                         ? `${formatDate(journey.startDate)} - ${formatDate(journey.endDate)}`
                         : journey.isFlexibleDates && journey.flexibleDays
                           ? `${journey.flexibleDays} days (flexible)`
-                          : 'Dates TBD'}
+                          : '5 days'}
                     </div>
                     {journey.budget && (
                       <div className='mt-1 text-xs text-gray-400 dark:text-gray-500'>

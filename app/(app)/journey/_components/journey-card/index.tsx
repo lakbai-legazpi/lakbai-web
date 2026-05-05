@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { TextBody } from '@/components/text';
+import Link from 'next/link';
+import { formatFlexibleSelection } from '@/lib/date-utils';
 
 export type JourneyCardJourney = {
   id: string;
@@ -10,6 +12,9 @@ export type JourneyCardJourney = {
   destination: string | null;
   startDate: Date | string | null;
   endDate: Date | string | null;
+  isFlexibleDates?: boolean;
+  flexibleDays?: number | null;
+  flexibleMonths?: string | null;
   createdAt: Date | string;
   coverImageUrl?: string | null;
 };
@@ -43,20 +48,30 @@ export default function JourneyCard({
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, []);
 
-  // Compute days if dates exist
-  let daysText = 'TBD days';
-  if (journey.startDate && journey.endDate) {
+  let daysText = '5 days';
+  if (journey.isFlexibleDates) {
+    daysText =
+      formatFlexibleSelection(
+        journey.flexibleDays || 5,
+        journey.flexibleMonths ? JSON.parse(journey.flexibleMonths) : []
+      ) || '5 days';
+  } else if (journey.startDate && journey.endDate) {
     const start = new Date(journey.startDate);
     const end = new Date(journey.endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     daysText = `${diffDays || 1} day${diffDays > 1 ? 's' : ''}`;
+  } else {
+    daysText = '5 days';
   }
 
   const coverImageUrl = journey.coverImageUrl?.trim();
 
   return (
-    <div className='group bg-surface-200 border-border relative h-55 w-full overflow-hidden rounded-[24px] border transition-all hover:shadow-md sm:h-65 md:h-75 lg:h-87.5 lg:w-112.5'>
+    <Link 
+      href={`/journey/${journey.id}`}
+      className='group bg-surface-200 border-border relative h-55 w-full block overflow-hidden rounded-[24px] border transition-all hover:shadow-md sm:h-65 md:h-75 lg:h-87.5 lg:w-112.5'
+    >
       <div className='absolute inset-0'>
         {coverImageUrl ? (
           <img
@@ -66,7 +81,7 @@ export default function JourneyCard({
             loading='lazy'
           />
         ) : (
-          <div className='absolute inset-0 bg-linear-to-br from-slate-200 via-slate-300 to-slate-400' />
+          <div className='absolute inset-0 bg-linear-to-br from-primary-400 via-secondary-300 to-primary-600 transition-transform duration-500 group-hover:scale-105' />
         )}
       </div>
 
@@ -76,7 +91,11 @@ export default function JourneyCard({
       <div className='absolute top-4 left-4 z-20'>
         <button
           type='button'
-          onClick={() => onToggleSelect(journey.id)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleSelect(journey.id);
+          }}
           className={
             selected
               ? 'bg-primary-600 border-primary-600 flex h-9 w-9 items-center justify-center rounded-full border text-white shadow-sm'
@@ -92,7 +111,11 @@ export default function JourneyCard({
       <div ref={menuRef} className='absolute top-4 right-4 z-20'>
         <button
           type='button'
-          onClick={() => setIsMenuOpen(prev => !prev)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsMenuOpen(prev => !prev);
+          }}
           className='bg-background/90 border-border text-text-main flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur transition hover:bg-white'
           aria-label='Journey actions'
           aria-expanded={isMenuOpen}
@@ -104,7 +127,9 @@ export default function JourneyCard({
           <div className='border-border bg-background absolute right-0 mt-2 w-40 overflow-hidden rounded-xl border shadow-lg'>
             <button
               type='button'
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 setIsMenuOpen(false);
                 onRename(journey);
               }}
@@ -115,7 +140,9 @@ export default function JourneyCard({
             </button>
             <button
               type='button'
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 setIsMenuOpen(false);
                 onDelete(journey);
               }}
@@ -138,6 +165,6 @@ export default function JourneyCard({
           {journey.destination || 'Planning exactly where'} • {daysText}
         </TextBody>
       </div>
-    </div>
+    </Link>
   );
 }

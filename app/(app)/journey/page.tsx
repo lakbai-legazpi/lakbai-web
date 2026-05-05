@@ -51,6 +51,9 @@ export default async function JourneyPage() {
       destination: true,
       startDate: true,
       endDate: true,
+      isFlexibleDates: true,
+      flexibleDays: true,
+      flexibleMonths: true,
       createdAt: true,
       itineraryItems: {
         select: {
@@ -74,6 +77,9 @@ export default async function JourneyPage() {
     destination: journey.destination,
     startDate: journey.startDate,
     endDate: journey.endDate,
+    isFlexibleDates: journey.isFlexibleDates,
+    flexibleDays: journey.flexibleDays,
+    flexibleMonths: journey.flexibleMonths,
     createdAt: journey.createdAt,
     coverImageUrl: pickJourneyCoverImage(journey.itineraryItems)
   }));

@@ -17,6 +17,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import { ProfileActionsMenu } from '../_components/ProfileActionsMenu';
+import { UserAvatar } from '@/components/UserAvatar';
 
 type ProfilePageProps = {
   params: Promise<{ username: string }>;
@@ -61,7 +62,8 @@ export default async function PublicProfilePage({ params, searchParams }: Profil
       username: true,
       firstName: true,
       lastName: true,
-      avatarUrl: true,
+      avatarSeed: true,
+      avatarOptions: true,
       location: true,
       bio: true,
       facebookUrl: true,
@@ -107,17 +109,7 @@ export default async function PublicProfilePage({ params, searchParams }: Profil
           <div className='flex w-full flex-col items-center text-center gap-4'>
             <div className='flex flex-col items-center gap-4'>
               <div className='from-primary-400 via-secondary-400 to-primary-300 relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br p-0.5'>
-                {profile.avatarUrl ? (
-                  <img
-                    src={profile.avatarUrl}
-                    alt={`${fullName} profile image`}
-                    className='bg-surface h-full w-full rounded-full object-cover'
-                  />
-                ) : (
-                  <div className='bg-surface text-text-main flex h-full w-full items-center justify-center rounded-full text-xl font-bold'>
-                    {getInitials(profile.firstName, profile.lastName, profile.username)}
-                  </div>
-                )}
+                <UserAvatar seed={profile.avatarSeed} options={profile.avatarOptions} className='h-full w-full' size={200} />
               </div>
 
               <div className='space-y-1.5 flex flex-col items-center'>

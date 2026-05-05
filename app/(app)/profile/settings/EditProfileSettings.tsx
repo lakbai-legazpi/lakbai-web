@@ -1,13 +1,14 @@
 'use client';
 
-import { ChangeEvent, useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Loader2, UserCircle2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { Toast } from '@/app/(app)/_components/Notificaiton';
+import { UserAvatar } from '@/components/UserAvatar';
+import { getRandomSeed } from '@/lib/avatars';
 
-type SettingsTab = 'edit-profile' | 'account-settings';
+type SettingsTab = 'edit-profile' | 'avatar' | 'account-settings';
 
 interface EditProfileSettingsProps {
   profile: {
@@ -16,7 +17,8 @@ interface EditProfileSettingsProps {
     firstName: string | null;
     lastName: string | null;
     username: string;
-    avatarUrl: string | null;
+    avatarSeed: string | null;
+    avatarOptions: any;
     location: string | null;
     bio: string | null;
     facebookUrl: string | null;
@@ -25,6 +27,15 @@ interface EditProfileSettingsProps {
     youtubeUrl: string | null;
   };
 }
+
+const bigSmileAttributes = {
+  accessories: ['none', 'catEars', 'glasses', 'sunglasses', 'faceMask', 'mustache'],
+  eyes: ['normal', 'cheery', 'starstruck', 'winking', 'sleepy', 'sad', 'angry'],
+  mouth: ['openedSmile', 'teethSmile', 'gapSmile', 'kawaii', 'awkwardSmile', 'unimpressed', 'openSad'],
+  hair: ['shortHair', 'straightHair', 'wavyBob', 'curlyBob', 'braids', 'bunHair', 'mohawk', 'shavedHead'],
+  skinColor: ['ffe4c0', 'f5d7b1', 'efcc9f', 'e2ba87', 'c99c62', 'a47539', '8c5a2b', '643d19'],
+  hairColor: ['220f00', '3a1a00', '71472d', 'e2ba87', '605de4', '238d80', 'd56c0c', 'e9b729'],
+};
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const maxAvatarSizeInBytes = 2 * 1024 * 1024;
@@ -52,7 +63,9 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
   const [username, setUsername] = useState(profile.username);
   const [location, setLocation] = useState(profile.location ?? '');
   const [bio, setBio] = useState(profile.bio ?? '');
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? '');
+  const [avatarSeed, setAvatarSeed] = useState(profile.avatarSeed || getRandomSeed());
+  const [avatarOptions, setAvatarOptions] = useState(profile.avatarOptions || {});
+
   const [facebookUrl, setFacebookUrl] = useState(profile.facebookUrl ?? '');
   const [instagramUrl, setInstagramUrl] = useState(profile.instagramUrl ?? '');
   const [tiktokUrl, setTiktokUrl] = useState(profile.tiktokUrl ?? '');
@@ -75,43 +88,28 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
     setTimeout(() => setIsToastOpen(false), 3000);
   };
 
-  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+  const handleOptionChange = (key: string, value: string) => {
+    setAvatarOptions((prev: any) => {
+      const newOptions = { ...prev };
+      
+      if (key === 'accessories' && value === 'none') {
+        newOptions.accessoriesProbability = 0;
+        delete newOptions.accessories;
+      } else {
+        if (key === 'accessories') {
+          newOptions.accessoriesProbability = 100;
+        }
+        newOptions[key] = [value];
+      }
+      
+      return newOptions;
+    });
+  };
 
-    if (!allowedImageTypes.includes(selectedFile.type)) {
-      openToast('Invalid file type. Only JPG, PNG, and WEBP are allowed.', 'error');
-      event.target.value = '';
-      return;
-    }
-
-    if (selectedFile.size > maxAvatarSizeInBytes) {
-      openToast('Image is too large. Max file size is 2MB.', 'error');
-      event.target.value = '';
-      return;
-    }
-
-    const extension = selectedFile.name.split('.').pop() ?? 'jpg';
-    const filePath = `${profile.id}/avatar-${Date.now()}.${extension}`;
-    const supabase = createClient();
-
-    const { error: uploadError } = await supabase.storage
-      .from('avatar')
-      .upload(filePath, selectedFile, {
-        upsert: true,
-        contentType: selectedFile.type,
-      });
-
-    if (uploadError) {
-      openToast(uploadError.message, 'error');
-      event.target.value = '';
-      return;
-    }
-
-    const { data } = supabase.storage.from('avatar').getPublicUrl(filePath);
-    setAvatarUrl(data.publicUrl);
-    openToast('Profile picture updated.', 'success');
-    event.target.value = '';
+  const handleRandomize = () => {
+    setAvatarSeed(getRandomSeed());
+    setAvatarOptions({});
+    openToast('Avatar randomized!', 'success');
   };
 
   const handleSaveProfile = async () => {
@@ -127,7 +125,8 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
           username,
           location,
           bio,
-          avatarUrl,
+          avatarSeed,
+          avatarOptions,
           facebookUrl,
           instagramUrl,
           tiktokUrl,
@@ -168,6 +167,17 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
           </button>
           <button
             type='button'
+            onClick={() => setActiveTab('avatar')}
+            className={`mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
+              activeTab === 'avatar'
+                ? 'bg-surface-light text-text-main'
+                : 'text-text-muted hover:bg-surface-light hover:text-text-main'
+            }`}
+          >
+            Avatar customization
+          </button>
+          <button
+            type='button'
             onClick={() => setActiveTab('account-settings')}
             className={`mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
               activeTab === 'account-settings'
@@ -185,30 +195,18 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
               <h1 className='text-2xl font-semibold'>Edit profile</h1>
 
               <div className='flex items-center gap-4'>
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt='Current profile picture'
-                    className='h-18 w-18 rounded-full object-cover'
-                  />
-                ) : (
-                  <div className='bg-surface-light flex h-18 w-18 items-center justify-center rounded-full'>
-                    <UserCircle2 className='text-text-muted h-10 w-10' />
-                  </div>
-                )}
+                <UserAvatar seed={avatarSeed} options={avatarOptions} className='h-20 w-20' size={200} />
                 <div>
                   <p className='text-lg font-semibold'>{displayName}</p>
                   <p className='text-text-muted text-sm'>@{username.replace(/^@+/, '')}</p>
                 </div>
-                <label className='bg-primary-500 hover:bg-primary-600 ml-auto cursor-pointer rounded-full px-4 py-2 text-sm font-semibold text-white'>
-                  Change photo
-                  <input
-                    type='file'
-                    accept='image/jpeg,image/png,image/webp'
-                    className='hidden'
-                    onChange={handleAvatarUpload}
-                  />
-                </label>
+                <button
+                  type='button'
+                  onClick={() => setActiveTab('avatar')}
+                  className='bg-surface-light hover:bg-surface-hover text-text-main ml-auto rounded-full px-4 py-2 text-sm font-semibold'
+                >
+                  Customize avatar
+                </button>
               </div>
 
               <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
@@ -298,24 +296,96 @@ export function EditProfileSettings({ profile }: EditProfileSettingsProps) {
                 ))}
               </div>
 
-              <div className='flex justify-end gap-3'>
-                <Link
-                  href={`/profile/${username.replace(/^@+/, '')}`}
-                  className='border-border hover:bg-surface-light rounded-full border px-5 py-2 text-sm'
-                >
-                  Cancel
-                </Link>
-                <button
-                  type='button'
-                  onClick={handleSaveProfile}
-                  disabled={isSaving}
-                  className='bg-primary-500 hover:bg-primary-600 rounded-full px-5 py-2 text-sm font-semibold text-white disabled:opacity-60'
-                >
-                  {isSaving ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Save changes'}
-                </button>
+                <div className='flex justify-end gap-3'>
+                  <Link
+                    href={`/profile/${username.replace(/^@+/, '')}`}
+                    className='border-border hover:bg-surface-light rounded-full border px-5 py-2 text-sm'
+                  >
+                    Cancel
+                  </Link>
+                  <button
+                    type='button'
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                    className='bg-primary-500 hover:bg-primary-600 rounded-full px-5 py-2 text-sm font-semibold text-white disabled:opacity-60'
+                  >
+                    {isSaving ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Save changes'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
+            ) : activeTab === 'avatar' ? (
+              <div className='space-y-6'>
+                <div className='flex items-center justify-between'>
+                  <h1 className='text-2xl font-semibold'>Customize your avatar</h1>
+                  <button
+                    type='button'
+                    onClick={handleRandomize}
+                    className='text-primary-600 text-sm font-medium hover:underline'
+                  >
+                    Randomize
+                  </button>
+                </div>
+
+                <div className='flex justify-center py-6'>
+                  <UserAvatar seed={avatarSeed} options={avatarOptions} className='h-40 w-40' size={400} />
+                </div>
+
+                <div className='grid grid-cols-1 gap-6 sm:grid-cols-2'>
+                  {Object.entries(bigSmileAttributes).map(([key, options]) => (
+                    <div key={key}>
+                      <label className='text-text-muted mb-1 block text-xs font-semibold uppercase'>{key}</label>
+                      <div className='flex flex-wrap gap-2'>
+                        {options.map(option => {
+                          const isColor = key.toLowerCase().includes('color');
+                          const isSelected = avatarOptions[key]?.[0] === option || (option === 'none' && avatarOptions.accessoriesProbability === 0);
+                          
+                          if (isColor) {
+                            return (
+                              <button
+                                key={option}
+                                type='button'
+                                onClick={() => handleOptionChange(key, option)}
+                                className={`h-8 w-8 rounded-full border-2 transition ${
+                                  isSelected ? 'border-primary-500 scale-110 shadow-sm' : 'border-border/50 hover:scale-105'
+                                }`}
+                                style={{ backgroundColor: `#${option}` }}
+                                title={`#${option}`}
+                              />
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={option}
+                              type='button'
+                              onClick={() => handleOptionChange(key, option)}
+                              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary-500 border-primary-500 text-white'
+                                  : 'border-border bg-surface-light text-text-main hover:border-text-muted'
+                              }`}
+                            >
+                              {option.replace(/([A-Z])/g, ' $1').trim()}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className='flex justify-end gap-3 pt-4'>
+                  <button
+                    type='button'
+                    onClick={handleSaveProfile}
+                    disabled={isSaving}
+                    className='bg-primary-500 hover:bg-primary-600 rounded-full px-5 py-2 text-sm font-semibold text-white disabled:opacity-60'
+                  >
+                    {isSaving ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Save changes'}
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className='space-y-3'>
               <h1 className='text-2xl font-semibold'>Your account settings</h1>
               <p className='text-text-muted text-sm'>

@@ -23,6 +23,7 @@ import { PoiActionButtons } from './PoiActionButtons';
 import { getTagLabel, getTagVisual } from './get-tag-icon';
 import { TextHeading, TextBody } from '@/components/text';
 import { cn } from '@/lib/cn';
+import { UserAvatar } from '@/components/UserAvatar';
 
 export type POIWithRelations = {
   id: string;
@@ -63,7 +64,8 @@ export type POIWithRelations = {
       name: string | null;
       firstName: string | null;
       lastName: string | null;
-      avatarUrl: string | null;
+      avatarSeed: string | null;
+      avatarOptions: any;
     };
   }[];
 
@@ -649,17 +651,12 @@ export default function PoiDetailsOverlay({
                     <article key={review.id} className='border-b pb-4'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>
-                          {review.user?.avatarUrl ? (
-                            <img
-                              src={review.user.avatarUrl}
-                              alt={fullName}
-                              className='bg-muted h-12 w-12 rounded-full object-cover'
-                            />
-                          ) : (
-                            <div className='bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full font-bold'>
-                              {fullName.charAt(0)}
-                            </div>
-                          )}
+                          <UserAvatar 
+                            seed={review.user.avatarSeed} 
+                            options={review.user.avatarOptions} 
+                            className='h-12 w-12' 
+                            size={120} 
+                          />
                           <div>
                             <p className='font-semibold'>{fullName}</p>
                             <p className='text-muted-foreground text-sm'>

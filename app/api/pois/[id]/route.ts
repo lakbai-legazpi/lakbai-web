@@ -31,7 +31,8 @@ export async function GET(
                                 name: true,
                                 firstName: true,
                                 lastName: true,
-                                avatarUrl: true,
+                                avatarSeed: true,
+                                avatarOptions: true,
                             }
                         }
                     },

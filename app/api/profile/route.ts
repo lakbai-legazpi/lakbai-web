@@ -8,7 +8,8 @@ type UpdateProfileBody = {
   username?: string;
   location?: string | null;
   bio?: string | null;
-  avatarUrl?: string | null;
+  avatarSeed?: string;
+  avatarOptions?: any;
   facebookUrl?: string | null;
   instagramUrl?: string | null;
   tiktokUrl?: string | null;
@@ -91,7 +92,8 @@ export async function GET() {
       firstName: true,
       lastName: true,
       username: true,
-      avatarUrl: true,
+      avatarSeed: true,
+      avatarOptions: true,
       location: true,
       bio: true,
       facebookUrl: true,
@@ -165,7 +167,8 @@ export async function PATCH(request: Request) {
         ...(username !== undefined && { username }),
         ...(body.location !== undefined && { location: normalizeTextOrNull(body.location) }),
         ...(body.bio !== undefined && { bio: normalizeTextOrNull(body.bio) }),
-        ...(body.avatarUrl !== undefined && { avatarUrl: normalizeUrlOrNull(body.avatarUrl) }),
+        ...(body.avatarSeed !== undefined && { avatarSeed: body.avatarSeed }),
+        ...(body.avatarOptions !== undefined && { avatarOptions: body.avatarOptions }),
         facebookUrl: socialUpdates.facebookUrl,
         instagramUrl: socialUpdates.instagramUrl,
         tiktokUrl: socialUpdates.tiktokUrl,
@@ -177,7 +180,8 @@ export async function PATCH(request: Request) {
         firstName: true,
         lastName: true,
         username: true,
-        avatarUrl: true,
+        avatarSeed: true,
+        avatarOptions: true,
         location: true,
         bio: true,
         facebookUrl: true,

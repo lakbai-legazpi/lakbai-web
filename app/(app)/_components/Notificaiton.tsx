@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 
 type NotificationType = 'delete-confirmation' | 'rename-confirmation';
 type ToastType = 'success' | 'error';
@@ -173,12 +173,17 @@ export function Toast({
   return (
     <div className='animate-in fade-in slide-in-from-top-4 fixed top-8 left-1/2 z-9999 -translate-x-1/2 duration-300'>
       <div
-        className={`rounded-lg px-6 py-3 text-sm font-medium shadow-lg ${
+        className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium shadow-lg ${
           type === 'success'
             ? 'border border-green-200 bg-green-50 text-green-900'
             : 'border border-red-200 bg-red-50 text-red-900'
         }`}
       >
+        {type === 'success' ? (
+          <CheckCircle2 className='h-4 w-4 text-green-600' />
+        ) : (
+          <AlertCircle className='h-4 w-4 text-red-600' />
+        )}
         {message}
       </div>
     </div>

@@ -37,7 +37,7 @@ export default async function AppLayout({
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { firstName: true, lastName: true, username: true, avatarUrl: true }
+    select: { firstName: true, lastName: true, username: true, avatarSeed: true, avatarOptions: true }
   });
 
   return (

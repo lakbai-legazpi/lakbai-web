@@ -16,12 +16,10 @@ import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { TextHeading, TextBody } from '@/components/text';
 import ItineraryItemCard from './ItineraryItemCard';
 import { useRouter } from 'next/navigation';
-import JourneyDatePickerModal, {
-  TimingData,
-  formatDateSelection,
-  formatFlexibleSelection
-} from '../../../_components/JourneyDatePickerModal';
+import EditableJourneyPills, { budgetOptions } from '../../../journey/_components/editable-journey-pills';
 import Notification, { Toast } from '../../../_components/Notificaiton';
+import JourneyCalendar from '../../../journey/_components/journey-calendar';
+import { cn } from '@/lib/utils';
 
 interface JourneyAreaPOI {
   id: string;
@@ -89,19 +87,13 @@ export default function JourneyArea({
   // Local state for optimistic updates
   const [items, setItems] = useState<JourneyAreaItineraryItem[]>([]);
   const [days, setDays] = useState<JourneyAreaJourneyDay[]>([]);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [toastConfig, setToastConfig] = useState<{
     isOpen: boolean;
     message: string;
   }>({ isOpen: false, message: '' });
-  const [activeDayDropdown, setActiveDayDropdown] = useState<string | null>(
-    null
-  );
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'calendar'>('itinerary');
+  const [activeDayDropdown, setActiveDayDropdown] = useState<string | null>(null);
   const [basecampDropdownOpen, setBasecampDropdownOpen] = useState(false);
-  const [companionsDropdownOpen, setCompanionsDropdownOpen] = useState(false);
-  const [companionsValue, setCompanionsValue] = useState('');
-  const [budgetDropdownOpen, setBudgetDropdownOpen] = useState(false);
-  const [budgetValue, setBudgetValue] = useState<number | null>(null);
   const [renameModal, setRenameModal] = useState<{
     isOpen: boolean;
     dayId: string;
@@ -112,15 +104,9 @@ export default function JourneyArea({
     dayId: string;
   }>({ isOpen: false, dayId: '' });
 
-  const [timingData, setTimingData] = useState<TimingData>({
-    selectedTimingType: null,
-    startDate: '',
-    endDate: '',
-    flexibleDays: 5,
-    flexibleMonths: []
-  });
 
-  // Sync props to local state
+
+  // We still need the useEffects to sync items and days
   useEffect(() => {
     if (journey?.itineraryItems) {
       setItems(journey.itineraryItems);
@@ -130,31 +116,7 @@ export default function JourneyArea({
     }
   }, [journey?.itineraryItems, journey?.days]);
 
-  useEffect(() => {
-    setCompanionsValue(journey?.companions || '');
-  }, [journey?.companions]);
 
-  useEffect(() => {
-    setBudgetValue(journey?.budget ?? null);
-  }, [journey?.budget]);
-
-  useEffect(() => {
-    if (journey) {
-      setTimingData({
-        selectedTimingType: journey.isFlexibleDates
-          ? 'flexible'
-          : journey.startDate
-            ? 'dates'
-            : null,
-        startDate: journey.startDate ? journey.startDate.split('T')[0] : '',
-        endDate: journey.endDate ? journey.endDate.split('T')[0] : '',
-        flexibleDays: journey.flexibleDays || 5,
-        flexibleMonths: journey.flexibleMonths
-          ? JSON.parse(journey.flexibleMonths)
-          : []
-      });
-    }
-  }, [journey]);
 
   // Group items by day
   const groupedItinerary = useMemo(() => {
@@ -197,55 +159,7 @@ export default function JourneyArea({
 
   const totalItems = items.length;
   const totalBasecampItems = groupedItinerary.basecamp.length;
-  const budgetOptions: Array<{ label: string; value: number | null }> = [
-    { label: 'Any budget', value: null },
-    { label: '₱', value: 1 },
-    { label: '₱₱', value: 2 },
-    { label: '₱₱₱', value: 3 },
-    { label: '₱₱₱₱', value: 4 }
-  ];
-  const budgetLabel =
-    budgetOptions.find(option => option.value === budgetValue)?.label ??
-    'Any budget';
 
-  const handleUpdateDates = async (newTiming: TimingData) => {
-    if (!journey?.id) return;
-    try {
-      const res = await fetch(`/api/journeys/${journey.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate: newTiming.startDate
-            ? new Date(newTiming.startDate).toISOString()
-            : null,
-          endDate: newTiming.endDate
-            ? new Date(newTiming.endDate).toISOString()
-            : null,
-          isFlexibleDates: newTiming.selectedTimingType === 'flexible',
-          flexibleDays: newTiming.flexibleDays,
-          flexibleMonths: newTiming.flexibleMonths
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setShowDatePicker(false);
-        router.refresh();
-        window.dispatchEvent(new Event('journey-updated'));
-        if (data.returnedItemsCount && data.returnedItemsCount > 0) {
-          setToastConfig({
-            isOpen: true,
-            message: `${data.returnedItemsCount} item${data.returnedItemsCount > 1 ? 's' : ''} did not fit in the new timeframe and ${data.returnedItemsCount > 1 ? 'were' : 'was'} returned to Basecamp.`
-          });
-          setTimeout(
-            () => setToastConfig({ isOpen: false, message: '' }),
-            5000
-          );
-        }
-      }
-    } catch (err) {
-      console.error('Failed to update dates', err);
-    }
-  };
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -497,163 +411,9 @@ export default function JourneyArea({
 
       {/* Connected Pills */}
       <div className='relative px-6 pb-5'>
-        <div className='border-border bg-surface inline-flex items-center overflow-visible rounded-3xl border'>
-          <button className='border-border text-text-main hover:bg-background rounded-l-3xl border-r px-5 py-2 text-[14px] font-medium transition-colors'>
-            {journey?.destination || 'Where'}
-          </button>
-
-          {/* Date Picker Trigger */}
-          <button
-            onClick={() => setShowDatePicker(true)}
-            className='border-border text-text-main hover:bg-background flex items-center gap-2 border-r px-5 py-2 text-[14px] font-medium transition-colors'
-          >
-            <CalendarIcon size={14} />
-            {journey?.isFlexibleDates
-              ? formatFlexibleSelection(
-                  journey.flexibleDays || 5,
-                  journey.flexibleMonths
-                    ? JSON.parse(journey.flexibleMonths)
-                    : []
-                ) || 'Flexible'
-              : journey?.startDate
-                ? formatDateSelection(
-                    journey.startDate.split('T')[0],
-                    journey.endDate?.split('T')[0] || ''
-                  )
-                : 'Date'}
-          </button>
-
-          <div className='relative'>
-            <button
-              onClick={() => setCompanionsDropdownOpen(prev => !prev)}
-              className='border-border text-text-main hover:bg-background flex items-center gap-2 border-r px-5 py-2 text-[14px] font-medium transition-colors'
-              aria-label='Select group size'
-            >
-              <span>
-                {companionsValue || journey?.companions || 'How many'}
-              </span>
-              <ChevronDown
-                size={16}
-                className={
-                  companionsDropdownOpen
-                    ? 'rotate-180 transition-transform'
-                    : 'transition-transform'
-                }
-              />
-            </button>
-
-            {companionsDropdownOpen && (
-              <>
-                <div
-                  className='fixed inset-0 z-40'
-                  onClick={() => setCompanionsDropdownOpen(false)}
-                />
-                <div className='border-border bg-background absolute top-full left-0 z-50 mt-1 w-full min-w-[180px] overflow-hidden rounded-2xl border shadow-lg'>
-                  {[
-                    '1 person',
-                    '1-2 persons',
-                    '3-4 persons',
-                    '5-8 persons',
-                    '9+ persons'
-                  ].map(option => (
-                    <button
-                      key={option}
-                      onClick={async () => {
-                        setCompanionsValue(option);
-                        setCompanionsDropdownOpen(false);
-                        try {
-                          const res = await fetch(
-                            `/api/journeys/${journey?.id}`,
-                            {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ companions: option })
-                            }
-                          );
-                          if (res.ok) {
-                            router.refresh();
-                            window.dispatchEvent(new Event('journey-updated'));
-                          }
-                        } catch (e) {
-                          console.error('Failed to update companions', e);
-                        }
-                      }}
-                      className='text-text-main hover:bg-primary-50 w-full px-5 py-3 text-left text-[15px] transition-colors'
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <div className='relative'>
-            <button
-              onClick={() => setBudgetDropdownOpen(prev => !prev)}
-              className='border-border text-text-main hover:bg-background flex items-center gap-2 rounded-r-3xl border-l px-5 py-2 text-[14px] font-medium transition-colors'
-              aria-label='Select budget'
-            >
-              <span>{budgetLabel}</span>
-              <ChevronDown
-                size={16}
-                className={
-                  budgetDropdownOpen
-                    ? 'rotate-180 transition-transform'
-                    : 'transition-transform'
-                }
-              />
-            </button>
-
-            {budgetDropdownOpen && (
-              <>
-                <div
-                  className='fixed inset-0 z-40'
-                  onClick={() => setBudgetDropdownOpen(false)}
-                />
-                <div className='border-border bg-background absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-2xl border shadow-lg'>
-                  {budgetOptions.map(option => (
-                    <button
-                      key={option.label}
-                      onClick={async () => {
-                        setBudgetValue(option.value);
-                        setBudgetDropdownOpen(false);
-                        try {
-                          const res = await fetch(
-                            `/api/journeys/${journey?.id}`,
-                            {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ budget: option.value })
-                            }
-                          );
-                          if (res.ok) {
-                            router.refresh();
-                            window.dispatchEvent(new Event('journey-updated'));
-                          }
-                        } catch (e) {
-                          console.error('Failed to update budget', e);
-                        }
-                      }}
-                      className='text-text-main hover:bg-primary-50 w-full px-5 py-3 text-left text-[15px] transition-colors'
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <EditableJourneyPills journey={journey as any} />
 
         {/* Modals and Toasts */}
-        {journey && (
-          <JourneyDatePickerModal
-            open={showDatePicker}
-            onClose={() => setShowDatePicker(false)}
-            onSubmit={handleUpdateDates}
-            initialData={timingData}
-          />
-        )}
 
         <Notification
           type='rename-confirmation'
@@ -707,10 +467,16 @@ export default function JourneyArea({
       {/* Tabs Row */}
       <div className='border-border flex items-center justify-between border-b px-6 pb-2'>
         <div className='flex items-center gap-4'>
-          <span className='text-text-main border-text-main -mb-[10px] cursor-pointer border-b-2 pb-[9px] text-[15px] font-bold'>
+          <span 
+            onClick={() => setActiveTab('itinerary')}
+            className={cn('cursor-pointer pb-[9px] text-[15px] transition-colors', activeTab === 'itinerary' ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold' : 'text-text-muted hover:text-foreground')}
+          >
             Itinerary
           </span>
-          <span className='text-text-muted hover:text-foreground cursor-pointer text-[15px]'>
+          <span 
+            onClick={() => setActiveTab('calendar')}
+            className={cn('cursor-pointer pb-[9px] text-[15px] transition-colors', activeTab === 'calendar' ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold' : 'text-text-muted hover:text-foreground')}
+          >
             Calendar
           </span>
         </div>
@@ -734,47 +500,22 @@ export default function JourneyArea({
         </div>
       </div>
 
-      {/* Journey Content - Wrapped in DragDropContext */}
-      <DragDropContext onDragEnd={handleDragEnd}>
+      {/* Journey Content */}
+      {activeTab === 'calendar' ? (
         <div className='flex-1 overflow-y-auto px-6 py-6'>
-          {/* Connected Chats Section */}
-          {journey?.chats && journey.chats.length > 0 && (
-            <div className='group mb-8'>
-              <div className='mb-3 flex items-center justify-between'>
-                <div className='flex items-center'>
-                  <TextBody className='text-foreground text-[15px] font-bold'>
-                    Connected Chats
-                  </TextBody>
-                  <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
-                    {journey.chats.length} chat
-                    {journey.chats.length !== 1 ? 's' : ''}
-                  </TextBody>
-                </div>
-              </div>
-              <div className='space-y-2'>
-                {journey.chats.map(chat => (
-                  <a
-                    key={chat.id}
-                    href={`/chat/${chat.id}`}
-                    className='border-border bg-primary-50 hover:bg-primary-100 dark:bg-primary-900 dark:hover:bg-primary-800 flex items-center justify-between rounded-lg border px-4 py-2 transition-colors'
-                  >
-                    <div className='min-w-0 flex-1'>
-                      <TextBody className='text-text-main truncate text-[14px] font-medium'>
-                        {chat.title}
-                      </TextBody>
-                      <TextBody className='text-text-muted text-xs'>
-                        {new Date(chat.createdAt).toLocaleDateString()}
-                      </TextBody>
-                    </div>
-                    <span className='text-text-main ml-2 text-sm'>→</span>
-                  </a>
-                ))}
-              </div>
-              <div className='border-border my-6 border-b'></div>
-            </div>
-          )}
-
-          {/* Basecamp Section */}
+          <JourneyCalendar
+            startDate={journey?.startDate ? new Date(journey.startDate) : null}
+            endDate={journey?.endDate ? new Date(journey.endDate) : null}
+            isFlexible={journey?.isFlexibleDates || false}
+            flexibleDays={journey?.flexibleDays}
+            flexibleMonths={journey?.flexibleMonths ? JSON.parse(journey.flexibleMonths) : []}
+            itineraryItems={items}
+          />
+        </div>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className='flex-1 overflow-y-auto px-6 py-6'>
+            {/* Basecamp Section */}
           <div className='group mb-8'>
             <div className='mb-3 flex items-center justify-between'>
               <div className='flex cursor-pointer items-center'>
@@ -1053,6 +794,7 @@ export default function JourneyArea({
           </div>
         </div>
       </DragDropContext>
+    )}
     </div>
   );
 }

@@ -14,12 +14,8 @@ import {
 import { TextHeading, TextBody } from '@/components/text';
 import { cn } from '@/lib/utils';
 
-import JourneyDatePickerModal, {
-  TimingData,
-  formatDateSelection,
-  formatFlexibleSelection,
-  sortMonthsByTimeline
-} from './JourneyDatePickerModal';
+import JourneyDatePickerModal, { TimingData } from './JourneyDatePickerModal';
+import { formatDateSelection, formatFlexibleSelection, sortMonthsByTimeline } from '@/lib/date-utils';
 
 export default function NewJourneyModal({
   open,
@@ -72,19 +68,14 @@ export default function NewJourneyModal({
     onSubmit({
       companions,
       destination,
-      dates:
-        timingData.selectedTimingType === 'flexible'
-          ? {
-              isFlexible: true,
-              days: timingData.flexibleDays,
-              month: sortedFlexibleMonths[0],
-              months: sortedFlexibleMonths
-            }
-          : {
-              isFlexible: false,
-              from: timingData.startDate,
-              to: timingData.endDate
-            },
+      dates: {
+        isFlexible: timingData.selectedTimingType === 'flexible',
+        days: timingData.flexibleDays,
+        month: sortedFlexibleMonths[0],
+        months: sortedFlexibleMonths,
+        from: timingData.startDate,
+        to: timingData.endDate
+      },
       preferences,
       budget: budgetValue
     });
