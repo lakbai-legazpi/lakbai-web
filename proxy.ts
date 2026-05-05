@@ -49,8 +49,17 @@ export async function proxy(request: NextRequest) {
   }
 
   // Protect all app routes — redirect unauthenticated users to /
+  const publicPaths = new Set([
+    '/',
+    '/about',
+    '/team',
+    '/contact',
+    '/privacy',
+    '/terms'
+  ]);
+
   const isPublicRoute =
-    pathname === '/' ||
+    publicPaths.has(pathname) ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/logos') ||

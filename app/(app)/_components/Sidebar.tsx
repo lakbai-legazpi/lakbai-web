@@ -412,7 +412,9 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
                 >
                   <div className='flex flex-col items-start'>
                     <span className='text-text-main text-sm font-semibold'>
-                      {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : 'User Profile'}
+                      {userProfile?.firstName
+                        ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                        : 'User Profile'}
                     </span>
                     <span className='text-text-muted text-xs'>
                       View profile
@@ -432,24 +434,33 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
                 </button>
 
                 <div className='px-4 py-2'>
-                  <button
-                    type='button'
+                  <Link
+                    href='/contact'
+                    target='_blank'
+                    rel='noreferrer'
+                    onClick={() => setIsProfileMenuOpen(false)}
                     className='hover:bg-surface-light text-text-main block w-full rounded-md px-2 py-2 text-left text-sm transition-colors'
                   >
                     Give Feedback
-                  </button>
-                  <button
-                    type='button'
+                  </Link>
+                  <Link
+                    href='/privacy'
+                    target='_blank'
+                    rel='noreferrer'
+                    onClick={() => setIsProfileMenuOpen(false)}
                     className='hover:bg-surface-light text-text-main block w-full rounded-md px-2 py-2 text-left text-sm transition-colors'
                   >
                     Privacy Policy
-                  </button>
-                  <button
-                    type='button'
+                  </Link>
+                  <Link
+                    href='/terms'
+                    target='_blank'
+                    rel='noreferrer'
+                    onClick={() => setIsProfileMenuOpen(false)}
                     className='hover:bg-surface-light text-text-main block w-full rounded-md px-2 py-2 text-left text-sm transition-colors'
                   >
                     Terms of Service
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Logout — separated by a top border */}
@@ -482,10 +493,10 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
             )}
           >
             {userProfile ? (
-              <UserAvatar 
-                seed={userProfile.avatarSeed} 
-                options={userProfile.avatarOptions} 
-                className={cn('h-6 w-6 shrink-0', !isCollapsed && 'h-8 w-8')} 
+              <UserAvatar
+                seed={userProfile.avatarSeed}
+                options={userProfile.avatarOptions}
+                className={cn('h-6 w-6 shrink-0', !isCollapsed && 'h-8 w-8')}
               />
             ) : (
               <UserCircle size={24} className='shrink-0' />
@@ -497,7 +508,9 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               )}
             >
               <span className='text-text-main text-sm font-medium whitespace-nowrap'>
-                {userProfile?.firstName ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim() : 'User Profile'}
+                {userProfile?.firstName
+                  ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                  : 'User Profile'}
               </span>
               <span className='text-text-muted text-xs whitespace-nowrap'>
                 {userProfile?.username ? `@${userProfile.username}` : ''}

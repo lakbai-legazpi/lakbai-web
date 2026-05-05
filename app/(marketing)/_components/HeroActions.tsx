@@ -1,33 +1,16 @@
 'use client';
 
-import React, { useState, useContext, createContext } from 'react';
+import React, { useEffect, useState, useContext, createContext } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Eye,
-  EyeOff,
-  Loader2,
-  ArrowRight,
-  ChevronLeft,
-  Compass,
-  Code2,
-  Users,
-  MessageSquare
-} from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 import { Modal } from '@/app/(marketing)/_components/UserAuthModal';
 import { createClient } from '@/lib/supabase/client';
-import { TextBody, TextHeading } from '@/components/text';
+import { TextBody } from '@/components/text';
+import { UserAvatar } from '@/components/UserAvatar';
 import { Toast } from '@/app/(app)/_components/Notificaiton';
-import Image from 'next/image';
 
-// Expanded views to include informational modals
-type AuthView =
-  | 'login'
-  | 'signup'
-  | 'about'
-  | 'team'
-  | 'privacy'
-  | 'terms'
-  | 'contact';
+type AuthView = 'login' | 'signup';
 type ToastType = 'success' | 'error';
 type SignUpStep = 'identity' | 'password' | 'username';
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -480,21 +463,11 @@ function SignUpForm({
 interface AuthContextValue {
   openLogin: () => void;
   openSignUp: () => void;
-  openAbout: () => void;
-  openTeam: () => void;
-  openPrivacy: () => void;
-  openTerms: () => void;
-  openContact: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   openLogin: () => {},
-  openSignUp: () => {},
-  openAbout: () => {},
-  openTeam: () => {},
-  openPrivacy: () => {},
-  openTerms: () => {},
-  openContact: () => {}
+  openSignUp: () => {}
 });
 
 // ---------------------------------------------------------------------------
@@ -520,12 +493,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         openLogin: () => setView('login'),
-        openSignUp: () => setView('signup'),
-        openAbout: () => setView('about'),
-        openTeam: () => setView('team'),
-        openPrivacy: () => setView('privacy'),
-        openTerms: () => setView('terms'),
-        openContact: () => setView('contact')
+        openSignUp: () => setView('signup')
       }}
     >
       {children}
@@ -557,205 +525,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         />
       </Modal>
 
-      {/* Information Modals */}
-      <Modal
-        isOpen={view === 'about'}
-        onClose={closeModal}
-        title='About Lakbai'
-        subtitle='Academic Community Project'
-      >
-        <div className='space-y-6'>
-          <TextBody className='leading-relaxed text-slate-600'>
-            Lakbai is an academic community-based project focused on building an
-            itinerary generator with a navigation planner.
-          </TextBody>
-          <div className='grid grid-cols-2 gap-4'>
-            <div className='rounded-2xl border border-slate-100 bg-slate-50 p-4'>
-              <Code2 className='text-primary-500 mb-2' size={20} />
-              <TextBody className='text-xs font-bold tracking-tight uppercase'>
-                Tech Stack
-              </TextBody>
-              <TextBody className='text-xs text-slate-500'>
-                Next.js, TypeScript, Mapbox GL
-              </TextBody>
-            </div>
-            <div className='rounded-2xl border border-slate-100 bg-slate-50 p-4'>
-              <Compass className='mb-2 text-orange-500' size={20} />
-              <TextBody className='text-xs font-bold tracking-tight uppercase'>
-                Focus
-              </TextBody>
-              <TextBody className='text-xs text-slate-500'>
-                Itinerary generator & navigation
-              </TextBody>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Team Modal */}
-      <Modal
-        isOpen={view === 'team'}
-        onClose={closeModal}
-        title='The LAKBAI Team'
-        subtitle='Academic Development Group'
-      >
-        <div className='scrollbar-hide max-h-[60vh] space-y-4 overflow-y-auto pr-2'>
-          {[
-            {
-              name: 'Johann Reuel Buere',
-              role: 'Lead Developer',
-              img: '/team/johann.jpg'
-            },
-            {
-              name: 'John Aries Brutas',
-              role: 'Developer',
-              img: '/team/aries.jpg'
-            },
-            {
-              name: 'John Benedict Del Rosario',
-              role: 'Developer',
-              img: '/team/benedict.jpg'
-            },
-            {
-              name: 'Christian Morga',
-              role: 'Developer',
-              img: '/team/christian.jpg'
-            },
-            {
-              name: 'Jaykob Perdigon',
-              role: 'Developer',
-              img: '/team/jaykob.jpg'
-            }
-          ].map(member => (
-            <div
-              key={member.name}
-              className='hover:border-primary-100 flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:shadow-md'
-            >
-              {/* Profile Image Container */}
-              <div className='relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100'>
-                {member.img ? (
-                  <Image
-                    src={member.img}
-                    alt={member.name}
-                    fill
-                    className='object-cover'
-                    sizes='48px'
-                  />
-                ) : (
-                  <div className='flex h-full w-full items-center justify-center font-bold text-slate-600'>
-                    {member.name[0]}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <TextBody className='mb-1 leading-none font-bold text-slate-900'>
-                  {member.name}
-                </TextBody>
-                <TextBody className='text-primary-500 text-[10px] font-bold tracking-widest uppercase'>
-                  {member.role}
-                </TextBody>
-              </div>
-            </div>
-          ))}
-
-          <div className='border-t border-slate-100 pt-4'>
-            <TextBody className='text-center text-xs text-slate-500 italic'>
-              Collaborative academic project by Bicol University CS Students.
-            </TextBody>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Contact Modal */}
-      <Modal
-        isOpen={view === 'contact'}
-        onClose={closeModal}
-        title='Get in Touch'
-        subtitle="We're here to help"
-      >
-        <div className='space-y-6'>
-          <div className='hover:border-primary-100 flex items-center gap-4 rounded-[2.5rem] border border-slate-100 bg-slate-50 p-6 transition-all'>
-            <div className='bg-primary-500 shadow-primary-500/20 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg'>
-              <MessageSquare size={24} />
-            </div>
-            <div>
-              <TextBody className='font-bold text-slate-900'>
-                Project Support
-              </TextBody>
-              <TextBody className='text-sm text-slate-500'>
-                For inquiries: lakbai.phl@gmail.com
-              </TextBody>
-            </div>
-          </div>
-
-          <div className='rounded-[2.5rem] border border-slate-100 bg-white p-6'>
-            <TextBody className='text-center text-sm leading-relaxed text-slate-500 italic'>
-              As an academic initiative, we prioritize email communication for
-              project coordination and documentation.
-            </TextBody>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Privacy Policy Modal */}
-      <Modal
-        isOpen={view === 'privacy'}
-        onClose={closeModal}
-        title='Privacy Policy'
-        subtitle='Last updated: April 2026'
-      >
-        <div className='scrollbar-hide max-h-[50vh] space-y-6 overflow-y-auto pr-2'>
-          <section>
-            <TextBody className='mb-2 font-bold text-slate-900'>
-              Data Collection
-            </TextBody>
-            <TextBody className='text-sm leading-relaxed text-slate-600'>
-              As an academic project, we collect minimal data including your
-              username and email to manage your itineraries. Authentication is
-              handled securely through Supabase.
-            </TextBody>
-          </section>
-          <section>
-            <TextBody className='mb-2 font-bold text-slate-900'>Usage</TextBody>
-            <TextBody className='text-sm leading-relaxed text-slate-600'>
-              Your location data is only used to generate routes via Mapbox GL
-              and is not stored permanently.
-            </TextBody>
-          </section>
-        </div>
-      </Modal>
-
-      {/* Terms of Service Modal */}
-      <Modal
-        isOpen={view === 'terms'}
-        onClose={closeModal}
-        title='Terms of Service'
-        subtitle='Academic Use Guidelines'
-      >
-        <div className='scrollbar-hide max-h-[50vh] space-y-6 overflow-y-auto pr-2'>
-          <section>
-            <TextBody className='mb-2 font-bold text-slate-900'>
-              1. Educational Purpose
-            </TextBody>
-            <TextBody className='text-sm leading-relaxed text-slate-600'>
-              Lakbai is a community-based academic project. The itinerary
-              generator and navigation planner are for informational purposes
-              only.
-            </TextBody>
-          </section>
-          <section>
-            <TextBody className='mb-2 font-bold text-slate-900'>
-              2. User Conduct
-            </TextBody>
-            <TextBody className='text-sm leading-relaxed text-slate-600'>
-              Users must follow our code of conduct, prioritizing respect and
-              constructive engagement within the platform.
-            </TextBody>
-          </section>
-        </div>
-      </Modal>
-
       <Toast
         isOpen={isToastOpen}
         message={toastMessage}
@@ -769,6 +538,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 /** Nav Buttons */
 export function NavAuthButtons() {
   const { openLogin, openSignUp } = useContext(AuthContext);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [userProfile, setUserProfile] = useState<{
+    email?: string | null;
+    fullName?: string | null;
+    username?: string | null;
+    avatarSeed?: string | null;
+    avatarOptions?: any;
+  } | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    const supabase = createClient();
+
+    const loadUser = async () => {
+      setIsLoadingUser(true);
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!isActive) return;
+
+      if (!user) {
+        setUserProfile(null);
+        setIsLoadingUser(false);
+        return;
+      }
+
+      let profile = {
+        email: user.email ?? null,
+        fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
+        username: (user.user_metadata?.username as string | undefined) ?? null,
+        avatarSeed: null,
+        avatarOptions: null
+      };
+
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.profile) {
+            const fullName = [data.profile.firstName, data.profile.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim();
+            profile = {
+              email: data.profile.email ?? profile.email ?? null,
+              fullName: fullName || data.profile.name || profile.fullName,
+              username: data.profile.username ?? profile.username ?? null,
+              avatarSeed: data.profile.avatarSeed ?? null,
+              avatarOptions: data.profile.avatarOptions ?? null
+            };
+          }
+        }
+      } catch {
+        // Fall back to auth metadata if profile fetch fails.
+      }
+
+      if (isActive) {
+        setUserProfile(profile);
+        setIsLoadingUser(false);
+      }
+    };
+
+    loadUser();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(() => {
+      loadUser();
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (isLoadingUser) {
+    return null;
+  }
+
+  if (userProfile) {
+    const displayName =
+      userProfile.fullName ||
+      (userProfile.username ? `@${userProfile.username}` : null) ||
+      userProfile.email ||
+      'Lakbai User';
+    const displayUsername = userProfile.username
+      ? `@${userProfile.username}`
+      : null;
+
+    return (
+      <div className='flex items-center gap-3 md:gap-4'>
+        <Link
+          href='/chat'
+          className='border-primary-500 text-primary-500 hover:bg-primary-50 rounded-full border px-4 py-2 text-sm font-semibold transition-colors'
+        >
+          Get Started
+        </Link>
+        <div className='flex items-center gap-3 rounded-full bg-slate-50 px-3 py-2'>
+          <UserAvatar
+            seed={userProfile.avatarSeed}
+            options={userProfile.avatarOptions}
+            className='h-9 w-9'
+            size={72}
+          />
+          <div className='leading-tight'>
+            <p className='text-text-main text-sm font-semibold'>
+              {displayName}
+            </p>
+            {displayUsername && (
+              <p className='text-text-muted text-xs'>{displayUsername}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='flex items-center gap-2 md:gap-4'>
       <button
@@ -789,48 +677,46 @@ export function NavAuthButtons() {
 
 /** Footer Component */
 export function FooterActions() {
-  const { openAbout, openTeam, openContact } = useContext(AuthContext);
   return (
     <div className='flex flex-col gap-3 md:text-right'>
-      <button
-        onClick={openAbout}
+      <Link
+        href='/about'
         className='text-text-muted text-left font-medium transition-colors hover:text-slate-900 md:text-right'
       >
         About
-      </button>
-      <button
-        onClick={openTeam}
+      </Link>
+      <Link
+        href='/team'
         className='text-text-muted text-left font-medium transition-colors hover:text-slate-900 md:text-right'
       >
         Team
-      </button>
-      <button
-        onClick={openContact}
+      </Link>
+      <Link
+        href='/contact'
         className='text-text-muted text-left font-medium transition-colors hover:text-slate-900 md:text-right'
       >
         Contact
-      </button>
+      </Link>
     </div>
   );
 }
 
 /** Legal Component */
 export function LegalActions() {
-  const { openPrivacy, openTerms } = useContext(AuthContext);
   return (
     <div className='flex items-center gap-4 md:gap-6'>
-      <button
-        onClick={openPrivacy}
+      <Link
+        href='/privacy'
         className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
       >
         Privacy Policy
-      </button>
-      <button
-        onClick={openTerms}
+      </Link>
+      <Link
+        href='/terms'
         className='text-text-muted hover:text-text-main text-sm font-medium transition-colors'
       >
         Terms of Service
-      </button>
+      </Link>
     </div>
   );
 }
