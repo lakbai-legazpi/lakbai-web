@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import JourneyArea from '../journey-area';
 import { JourneyPickerModal } from '../JourneyPickerModal';
@@ -12,7 +12,8 @@ import {
   CornerDownRight,
   Pencil,
   Map,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { TextBody } from '@/components/text';
 import Notification, { Toast } from '../../../_components/Notificaiton';
@@ -41,6 +42,12 @@ export default function Chatbox({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [userLabel, setUserLabel] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -49,6 +56,17 @@ export default function Chatbox({
   const params = useParams();
   const chatId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+
+  const examplePrompts = [
+    'Build a 3-day itinerary using nearby POIs.',
+    'Make a relaxed day plan with food stops and sunset views.',
+    'Reorder my itinerary by travel time and energy level.',
+    'Suggest budget-friendly places for my current journey.'
+  ];
 
   useEffect(() => {
     if (!chatId) {
@@ -74,6 +92,8 @@ export default function Chatbox({
           setChat(data.chat);
           setJourney(data.journey || null); // journey may be null for blank chats
           setMessages(data.chat.messages || []);
+          setIsRateLimited(false);
+          setRateLimitMessage('');
         }
       } catch (err) {
         console.error('Failed to load chat', err);
@@ -81,6 +101,28 @@ export default function Chatbox({
     }
     fetchChat();
   }, [chatId, router]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadProfile = async () => {
+      try {
+        const res = await fetch('/api/profile');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isActive || !data?.profile) return;
+        const firstName = data.profile.firstName || '';
+        const username = data.profile.username || '';
+        const label = firstName || (username ? `@${username}` : '');
+        setUserLabel(label || null);
+      } catch (err) {
+        console.error('Failed to load profile', err);
+      }
+    };
+    loadProfile();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleJourneyLinked = (e: any) => {
@@ -122,6 +164,103 @@ export default function Chatbox({
     const timer = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+        mediaRecorderRef.current?.stop();
+      }
+      mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+
+  const handleTranscription = async (audioBlob: Blob) => {
+    if (!audioBlob.size) return;
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      const audioFile = new File([audioBlob], 'lakbai-voice.webm', {
+        type: audioBlob.type || 'audio/webm'
+      });
+      formData.append('file', audioFile);
+
+      const res = await fetch('/api/speech-to-text', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setToast({
+          message: data.error || 'Failed to transcribe audio.',
+          type: 'error'
+        });
+        return;
+      }
+
+      if (data.text) {
+        setMessage(prev => (prev ? `${prev} ${data.text}` : data.text));
+        inputRef.current?.focus();
+      }
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Failed to transcribe audio.', type: 'error' });
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const startRecording = async () => {
+    if (isRecording || isRateLimited || isTranscribing) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setToast({
+        message: 'Voice input is not supported in this browser.',
+        type: 'error'
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = event => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm'
+        });
+        await handleTranscription(audioBlob);
+        mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+        audioChunksRef.current = [];
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Microphone access was denied.', type: 'error' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (
+      !mediaRecorderRef.current ||
+      mediaRecorderRef.current.state === 'inactive'
+    ) {
+      return;
+    }
+    mediaRecorderRef.current.stop();
+    setIsRecording(false);
+  };
 
   const handleConfirmRename = async (newName?: string) => {
     if (!chat?.id || !newName?.trim()) return;
@@ -215,10 +354,10 @@ export default function Chatbox({
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!message.trim() || !chat) return;
+  const handleSendMessage = async (overrideMessage?: string) => {
+    const userMsg = (overrideMessage ?? message).trim();
+    if (!userMsg || !chat || isRateLimited) return;
 
-    const userMsg = message;
     setMessage('');
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setIsAiTyping(true);
@@ -229,25 +368,41 @@ export default function Chatbox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatId: chat.id,
-          journeyId: journey.id,
+          journeyId: journey?.id ?? null,
           message: userMsg
         })
       });
+
       const data = await res.json();
+
+      if (res.status === 429 && data?.rateLimited) {
+        setIsRateLimited(true);
+        setRateLimitMessage(
+          data.error || 'Daily AI limit reached. Please try again tomorrow.'
+        );
+        setIsAiTyping(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setToast({
+          message: data?.error || 'Failed to send message.',
+          type: 'error'
+        });
+        setIsAiTyping(false);
+        return;
+      }
+
+      if (data.chat) {
+        setChat(data.chat);
+      }
       if (data.journey) {
         setJourney(data.journey);
-        if (data.chat?.messages) {
-          setMessages(data.chat.messages);
-        } else {
-          setMessages(prev => [
-            ...prev,
-            {
-              role: 'ai',
-              content:
-                data.aiText || `I've updated the journey based on your request.`
-            }
-          ]);
-        }
+      }
+      if (data.chat?.messages) {
+        setMessages(data.chat.messages);
+      } else if (data.aiText) {
+        setMessages(prev => [...prev, { role: 'ai', content: data.aiText }]);
       }
     } catch (e) {
       console.error(e);
@@ -367,12 +522,75 @@ export default function Chatbox({
           </div>
 
           {/* Chat Body Area */}
-          <div className='flex flex-1 flex-col justify-end overflow-hidden'>
+          <div className='relative flex flex-1 flex-col justify-end overflow-hidden'>
             {/* Messages Area */}
             <div className='flex-1 space-y-4 overflow-y-auto p-4'>
               {messages.length === 0 ? (
-                <div className='text-text-muted flex h-full items-center justify-center text-sm'>
-                  No messages yet. Send a message to get started!
+                <div className='flex h-full flex-col items-center justify-center px-6 text-center'>
+                  <h2 className='text-text-main text-2xl font-semibold'>
+                    Where to travel this time{userLabel ? `, ${userLabel}` : ''}
+                    ?
+                  </h2>
+                  <p className='text-text-muted mt-2 text-sm'>
+                    Hey there, I am here to assist you in planning your
+                    experience. Ask me anything travel related.
+                  </p>
+                  <ul className='text-text-muted mt-4 grid gap-2 text-left text-xs sm:text-sm'>
+                    <li>Build multi-day itineraries from local POIs.</li>
+                    <li>Reorder days, time blocks, and stop sequences.</li>
+                    <li>Adjust budget, dates, and trip preferences.</li>
+                    <li>Recommend places that match your journey goals.</li>
+                  </ul>
+                  <div className='mt-5 flex flex-wrap justify-center gap-2'>
+                    <button
+                      type='button'
+                      onClick={() => setShowExamples(true)}
+                      className='border-text-muted text-text-main hover:bg-surface rounded-full border px-4 py-2 text-sm font-medium transition-colors'
+                    >
+                      What can I ask Lakbai?
+                    </button>
+                  </div>
+
+                  {showExamples && (
+                    <div className='border-border bg-background mt-6 w-full max-w-lg rounded-2xl border p-4 text-left shadow-sm'>
+                      <div className='flex items-start justify-between gap-4'>
+                        <div>
+                          <button
+                            type='button'
+                            className='text-text-main hover:text-primary-600 text-sm font-semibold transition-colors'
+                          >
+                            Examples of things Lakbai can help you with
+                          </button>
+                          <p className='text-text-muted mt-1 text-xs'>
+                            Tap one to add it to the chat box.
+                          </p>
+                        </div>
+                        <button
+                          type='button'
+                          onClick={() => setShowExamples(false)}
+                          className='text-text-muted hover:text-text-main rounded-full p-1'
+                          aria-label='Close examples'
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className='mt-3 flex flex-wrap gap-2'>
+                        {examplePrompts.map(prompt => (
+                          <button
+                            key={prompt}
+                            type='button'
+                            onClick={() => {
+                              setMessage(prompt);
+                              inputRef.current?.focus();
+                            }}
+                            className='border-text-muted text-text-main hover:bg-surface rounded-full border px-3 py-2 text-xs font-medium transition-colors'
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 messages.map((m, i) => (
@@ -397,6 +615,20 @@ export default function Chatbox({
               )}
             </div>
 
+            {isRateLimited && (
+              <div className='absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm'>
+                <div className='border-border bg-background max-w-sm rounded-2xl border px-4 py-3 text-center shadow-sm'>
+                  <p className='text-text-main text-sm font-semibold'>
+                    Daily AI limit reached
+                  </p>
+                  <p className='text-text-muted mt-1 text-xs'>
+                    {rateLimitMessage ||
+                      'You have hit the free usage cap. Please try again tomorrow.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Bottom Input Area */}
             <div className='px-4 pt-1 pb-4'>
               <div className='border-text-muted bg-background flex items-center gap-3 rounded-[24px] border px-5 py-[14px]'>
@@ -408,14 +640,27 @@ export default function Chatbox({
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleSendMessage();
                   }}
-                  className='text-text-main placeholder:text-text-muted flex-1 bg-transparent text-[15px] outline-none'
+                  ref={inputRef}
+                  disabled={isRateLimited}
+                  className='text-text-main placeholder:text-text-muted flex-1 bg-transparent text-[15px] outline-none disabled:cursor-not-allowed'
                 />
-                <button className='text-text-main hover:text-primary-800 hover:bg-surface rounded-full p-1'>
+                <button
+                  type='button'
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isRateLimited || isTranscribing}
+                  aria-pressed={isRecording}
+                  className={`rounded-full p-1 transition-colors disabled:opacity-50 ${
+                    isRecording
+                      ? 'bg-primary-600 text-white'
+                      : 'text-text-main hover:text-primary-800 hover:bg-surface'
+                  }`}
+                >
                   <Mic size={22} strokeWidth={1.5} />
                 </button>
                 <button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim()}
+                  type='button'
+                  onClick={() => handleSendMessage()}
+                  disabled={!message.trim() || isRateLimited}
                   className='text-text-main hover:text-primary-800 hover:bg-surface rounded-full p-1 disabled:opacity-50'
                 >
                   <CornerDownRight size={22} strokeWidth={1.5} />

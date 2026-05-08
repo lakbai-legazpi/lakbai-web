@@ -3,12 +3,39 @@ import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
 
+const DAILY_AI_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? '25');
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
+
+const getStartOfDay = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+const isRateLimited = async (userId: string) => {
+  const startOfDay = getStartOfDay();
+  const usageCount = await prisma.message.count({
+    where: {
+      role: 'user',
+      createdAt: { gte: startOfDay },
+      chat: { userId }
+    }
+  });
+  return usageCount >= DAILY_AI_LIMIT;
+};
+
+const toDateOrNull = (value: string | null | undefined) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export async function POST(request: Request) {
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await request.json();
     const { message, chatId, journeyId, isNewContext, newJourneyData } = body;
@@ -26,14 +53,28 @@ Whenever you respond, you MUST output a STRICT JSON object answering to the foll
 Make sure the conversational reply is inside the "aiText" field.
 {
   "aiText": "A friendly conversational response to the user's request. This is what the user will read.",
+  "updatedChatTitle": "A concise chat title if the chat is untitled",
   "updatedTitle": "A catchy name for the journey",
   "updatedDestination": "The main city or location (optional)",
   "updatedBudget": 500,
+  "updatedStartDate": "YYYY-MM-DD (optional)",
+  "updatedEndDate": "YYYY-MM-DD (optional)",
+  "updatedIsFlexibleDates": false,
+  "updatedFlexibleDays": 3,
+  "updatedFlexibleMonths": ["January", "February"],
+  "updatedCompanions": "solo | couple | family | friends (optional)",
+  "updatedPreferences": "short text summary of preferences (optional)",
+  "dayTitles": [
+    { "dayNumber": 1, "title": "Arrival and city stroll" }
+  ],
   "itinerary": [
     {
       "dayNumber": 1,
       "poiId": "string (must exactly match a provided POI ID)",
-      "orderIndex": 0
+      "orderIndex": 0,
+      "startTime": "09:00 (optional)",
+      "endTime": "11:00 (optional)",
+      "notes": "short note (optional)"
     }
   ]
 }
@@ -45,20 +86,15 @@ Only output the raw JSON. Not wrapped in markdown blocks.
       if (body.isBlank) {
         // Create an untitled blank chat WITH NO JOURNEY
         chat = await prisma.chat.create({
-          data: { 
-            title: "Untitled Chat",
-            userId: user?.id ?? null
+          data: {
+            title: 'Untitled Chat',
+            userId: user.id
           }
         });
-        const initGreeting = "Hi! I'm your AI Travel Assistant. Where would you like to explore today?";
-        await prisma.message.create({
-          data: { chatId: chat.id, role: 'ai', content: initGreeting }
-        });
-        
-        return NextResponse.json({ 
-           chat: { ...chat, messages: [{ role: 'ai', content: initGreeting }] }, 
-           journey: null,
-           aiText: initGreeting
+
+        return NextResponse.json({
+          chat: { ...chat, messages: [] },
+          journey: null
         });
       }
 
@@ -70,7 +106,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           include: { messages: { orderBy: { createdAt: 'asc' } } }
         });
 
-        if (!targetChat || targetChat.userId !== user?.id) {
+        if (!targetChat || targetChat.userId !== user.id) {
           return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
         }
 
@@ -82,7 +118,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           }
         });
 
-        if (!targetJourney || targetJourney.userId !== user?.id) {
+        if (!targetJourney || targetJourney.userId !== user.id) {
           return NextResponse.json({ error: "Journey not found or unauthorized" }, { status: 404 });
         }
 
@@ -108,8 +144,6 @@ Only output the raw JSON. Not wrapped in markdown blocks.
 
       // Traditional parameters flow via explicit newJourneyData constraints
       if (newJourneyData) {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
-        
         if (body.updateJourneyContext && body.chatId) {
           // User is filling the modal inside an existing blank chat
           journey = await prisma.journey.create({
@@ -130,7 +164,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               flexibleMonths: newJourneyData.dates?.months
                 ? JSON.stringify(newJourneyData.dates.months)
                 : null,
-              userId: user?.id ?? null,
+              userId: user.id,
               days: {
                 create: Array.from({ 
                   length: newJourneyData.dates?.isFlexible 
@@ -173,7 +207,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               flexibleMonths: newJourneyData.dates?.months
                 ? JSON.stringify(newJourneyData.dates.months)
                 : null,
-              userId: user?.id ?? null,
+              userId: user.id,
               days: {
                 create: Array.from({ 
                   length: newJourneyData.dates?.isFlexible 
@@ -193,61 +227,254 @@ Only output the raw JSON. Not wrapped in markdown blocks.
             data: {
               journeyId: journey.id,
               title: `Journey to ${newJourneyData.destination}`,
-              userId: user?.id ?? null,
+              userId: user.id,
             }
           });
         }
 
-        const initPrompt = `
-        ${systemInstruction}
-        
-        The user just created a new journey with these explicit parameters:
-        Destination: ${newJourneyData.destination}
-        Companions: ${newJourneyData.companions}
-        Budget: ${newJourneyData.budget ?? 'Any'}
-        Preferences: ${newJourneyData.preferences}
-        Dates Flexible: ${newJourneyData.dates?.isFlexible}
-        
-        Do not build the full itinerary yet. Return an empty itinerary for now, just establish the updatedTitle and updatedDestination. Fill aiText with an enthusiastic outgoing greeting acknowledging their constraints and asking what kinds of experiences they are initially looking for in ${newJourneyData.destination}!
-        `;
-        
-        const result = await model.generateContent(initPrompt);
-        const resText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-        let aiData;
-        try {
-          aiData = JSON.parse(resText);
-        } catch (e) {
-          aiData = { aiText: "Let's plan your journey! What kind of places do you want to visit?", updatedTitle: journey.title };
-        }
-
-        const aiMsg = await prisma.message.create({
-          data: { chatId: chat.id, role: 'ai', content: aiData.aiText }
-        });
-        
-        return NextResponse.json({ 
-           chat: { ...chat, messages: [{ role: 'ai', content: aiData.aiText }] }, 
-           journey,
-           aiText: aiData.aiText
+        return NextResponse.json({
+          chat,
+          journey
         });
       }
     }
 
     // 2. Continuing an existing chat
-    if (!chatId || !journeyId) {
-      return NextResponse.json({ error: "Missing IDs" }, { status: 400 });
+    if (!chatId) {
+      return NextResponse.json({ error: 'Missing chatId' }, { status: 400 });
     }
 
-    journey = await prisma.journey.findUnique({
-      where: { id: journeyId },
-      include: { itineraryItems: { include: { poi: { include: { tags: { include: { cluster: true } } } } } } }
-    });
-    
     chat = await prisma.chat.findUnique({
       where: { id: chatId },
       include: { messages: { orderBy: { createdAt: 'asc' } } }
     });
 
-    if (!journey || !chat) return NextResponse.json({ error: "Data not found" }, { status: 404 });
+    if (!chat || chat.userId !== user.id) {
+      return NextResponse.json({ error: 'Chat not found or unauthorized' }, { status: 404 });
+    }
+
+    if (!journeyId) {
+      if (!message || !message.trim()) {
+        return NextResponse.json({ error: 'Missing message' }, { status: 400 });
+      }
+
+      if (await isRateLimited(user.id)) {
+        return NextResponse.json(
+          {
+            error: 'Daily AI limit reached. Please try again tomorrow.',
+            rateLimited: true
+          },
+          { status: 429 }
+        );
+      }
+
+      await prisma.message.create({
+        data: { chatId: chat.id, role: 'user', content: message }
+      });
+
+      let pois = await prisma.pOI.findMany({
+        include: {
+          tags: { select: { name: true, cluster: { select: { name: true } } } }
+        },
+        take: 40
+      });
+
+      const contextPois = pois.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        tags: p.tags.map(tag => ({
+          name: tag.name,
+          cluster: tag.cluster?.name ?? null
+        }))
+      }));
+
+      const newJourneyPrompt = `
+${systemInstruction}
+
+You are creating a NEW journey from scratch.
+Use the POI list below as the only valid POI choices.
+If the user does not specify dates, you can propose a reasonable multi-day plan.
+If the user does not specify a destination, infer one from the POIs and explain in aiText.
+
+User message: "${message}"
+
+Available POIs:
+${JSON.stringify(contextPois)}
+
+Return a helpful aiText and a full itinerary.
+`;
+
+      const apiKey = process.env.GEMINI_API_KEY || '';
+      if (!apiKey) {
+        return NextResponse.json(
+          { error: 'Missing GEMINI_API_KEY' },
+          { status: 500 }
+        );
+      }
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const result = await genAI
+        .getGenerativeModel({ model: GEMINI_MODEL })
+        .generateContent(newJourneyPrompt);
+      const resText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+
+      let aiData: any;
+      try {
+        aiData = JSON.parse(resText);
+      } catch {
+        aiData = {
+          aiText:
+            'I can build a full itinerary, but I need a destination and a few preferences. Where should we start?',
+          itinerary: []
+        };
+      }
+
+      const destination = aiData.updatedDestination || null;
+      const journeyTitle =
+        aiData.updatedTitle ||
+        (destination ? `Journey to ${destination}` : 'Lakbai Journey');
+
+      const startDate = toDateOrNull(aiData.updatedStartDate);
+      const endDate = toDateOrNull(aiData.updatedEndDate);
+
+      const isFlexibleDates =
+        typeof aiData.updatedIsFlexibleDates === 'boolean'
+          ? aiData.updatedIsFlexibleDates
+          : !startDate || !endDate;
+
+      const flexibleDays =
+        typeof aiData.updatedFlexibleDays === 'number'
+          ? aiData.updatedFlexibleDays
+          : null;
+
+      const flexibleMonths = Array.isArray(aiData.updatedFlexibleMonths)
+        ? JSON.stringify(aiData.updatedFlexibleMonths)
+        : null;
+
+      const itinerary = Array.isArray(aiData.itinerary)
+        ? aiData.itinerary
+        : [];
+
+      const maxDayFromItinerary = itinerary.reduce(
+        (max: number, item: any) => Math.max(max, item.dayNumber || 0),
+        0
+      );
+
+      const derivedDayCount = isFlexibleDates
+        ? flexibleDays || Math.max(1, maxDayFromItinerary || 1)
+        : startDate && endDate
+          ? Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+          : Math.max(1, maxDayFromItinerary || 1);
+
+      journey = await prisma.journey.create({
+        data: {
+          title: journeyTitle,
+          destination,
+          companions: aiData.updatedCompanions || null,
+          preferences: aiData.updatedPreferences || null,
+          budget: typeof aiData.updatedBudget === 'number' ? aiData.updatedBudget : null,
+          startDate,
+          endDate,
+          isFlexibleDates,
+          flexibleDays: flexibleDays ?? null,
+          flexibleMonths,
+          userId: user.id,
+          days: {
+            create: Array.from({ length: derivedDayCount }).map((_, i) => ({
+              dayNumber: i + 1,
+              title: `Day ${i + 1}`
+            }))
+          }
+        }
+      });
+
+      const validPoiIds = new Set(contextPois.map(poi => poi.id));
+      for (const item of itinerary) {
+        if (!item.poiId || !validPoiIds.has(item.poiId)) continue;
+        await prisma.itineraryItem.create({
+          data: {
+            journeyId: journey.id,
+            poiId: item.poiId,
+            dayNumber: item.dayNumber ?? null,
+            orderIndex: item.orderIndex ?? 0,
+            startTime: item.startTime ?? null,
+            endTime: item.endTime ?? null,
+            notes: item.notes ?? null
+          }
+        });
+      }
+
+      const dayTitles = Array.isArray(aiData.dayTitles) ? aiData.dayTitles : [];
+      for (const dayTitle of dayTitles) {
+        if (!dayTitle?.dayNumber) continue;
+        await prisma.journeyDay.updateMany({
+          where: { journeyId: journey.id, dayNumber: dayTitle.dayNumber },
+          data: { title: dayTitle.title || `Day ${dayTitle.dayNumber}` }
+        });
+      }
+
+      const updatedChatTitle =
+        aiData.updatedChatTitle ||
+        (chat.title.toLowerCase().includes('untitled') ? journeyTitle : null);
+
+      chat = await prisma.chat.update({
+        where: { id: chat.id },
+        data: {
+          journeyId: journey.id,
+          ...(updatedChatTitle ? { title: updatedChatTitle } : {})
+        }
+      });
+
+      if (aiData.aiText) {
+        await prisma.message.create({
+          data: { chatId: chat.id, role: 'ai', content: aiData.aiText }
+        });
+      }
+
+      const updatedJourney = await prisma.journey.findUnique({
+        where: { id: journey.id },
+        include: {
+          days: { orderBy: { dayNumber: 'asc' } },
+          itineraryItems: {
+            include: { poi: { include: { tags: { include: { cluster: true } } } } },
+            orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }]
+          }
+        }
+      });
+
+      const updatedChat = await prisma.chat.findUnique({
+        where: { id: chat.id },
+        include: { messages: { orderBy: { createdAt: 'asc' } } }
+      });
+
+      return NextResponse.json({
+        journey: updatedJourney,
+        chat: updatedChat,
+        aiText: aiData.aiText
+      });
+    }
+
+    journey = await prisma.journey.findUnique({
+      where: { id: journeyId },
+      include: {
+        days: { orderBy: { dayNumber: 'asc' } },
+        itineraryItems: { include: { poi: { include: { tags: { include: { cluster: true } } } } } }
+      }
+    });
+
+    if (!journey || journey.userId !== user.id) {
+      return NextResponse.json({ error: 'Journey not found or unauthorized' }, { status: 404 });
+    }
+
+    if (await isRateLimited(user.id)) {
+      return NextResponse.json(
+        {
+          error: 'Daily AI limit reached. Please try again tomorrow.',
+          rateLimited: true
+        },
+        { status: 429 }
+      );
+    }
 
     // Save the incoming user message to memory immediately
     await prisma.message.create({
@@ -263,10 +490,28 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           { name: { contains: journey.destination, mode: 'insensitive' } }
         ]
       } : {},
+      include: {
+        tags: { select: { name: true, cluster: { select: { name: true } } } }
+      },
       take: 20
     });
-    if (pois.length === 0) pois = await prisma.pOI.findMany({ take: 20 });
-    const contextPois = pois.map(p => ({ id: p.id, name: p.name, description: p.description }));
+    if (pois.length === 0) {
+      pois = await prisma.pOI.findMany({
+        include: {
+          tags: { select: { name: true, cluster: { select: { name: true } } } }
+        },
+        take: 20
+      });
+    }
+    const contextPois = pois.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      tags: p.tags.map(tag => ({
+        name: tag.name,
+        cluster: tag.cluster?.name ?? null
+      }))
+    }));
 
     // Prepare History Array
     const history = chat.messages.map(m => ({
@@ -274,25 +519,42 @@ Only output the raw JSON. Not wrapped in markdown blocks.
       parts: [{ text: m.content }]
     }));
 
-    const chatSession = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" }).startChat({
+    const apiKey = process.env.GEMINI_API_KEY || '';
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Missing GEMINI_API_KEY' },
+        { status: 500 }
+      );
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
+     const chatSession = genAI.getGenerativeModel({ model: GEMINI_MODEL }).startChat({
        history: history
     });
 
     const activePrompt = `
-      ${systemInstruction}
-      
-      Current Live Journey State:
-      Destination: ${journey.destination}
-      Budget: ${journey.budget}
-      Current Itinerary Setup: ${JSON.stringify(journey.itineraryItems.map(i => ({ day: i.dayNumber, poi: i.poi.name, startTime: i.startTime, endTime: i.endTime })))}
-      
-      Available POIs in database for this region:
-      ${JSON.stringify(contextPois)}
-      
-      User's Latest Message: "${message}"
-      
-      Update the journey as requested by the user, and respond to them!
-    `;
+${systemInstruction}
+
+Current Live Journey State:
+Chat title: ${chat.title}
+Journey title: ${journey.title}
+Destination: ${journey.destination}
+Budget: ${journey.budget}
+Companions: ${journey.companions ?? 'Unknown'}
+Preferences: ${journey.preferences ?? 'None provided'}
+Dates: ${journey.startDate ? journey.startDate.toISOString() : 'N/A'} to ${journey.endDate ? journey.endDate.toISOString() : 'N/A'}
+Flexible Dates: ${journey.isFlexibleDates ? 'Yes' : 'No'}
+Flexible Days: ${journey.flexibleDays ?? 'N/A'}
+Flexible Months: ${journey.flexibleMonths ?? 'N/A'}
+Days: ${JSON.stringify(journey.days.map(day => ({ dayNumber: day.dayNumber, title: day.title })))}
+Current Itinerary Setup: ${JSON.stringify(journey.itineraryItems.map(i => ({ day: i.dayNumber, poiId: i.poiId, poi: i.poi.name, startTime: i.startTime, endTime: i.endTime, notes: i.notes })))}
+
+Available POIs in database for this region:
+${JSON.stringify(contextPois)}
+
+User's Latest Message: "${message}"
+
+Update the journey as requested by the user, and respond to them!
+`;
 
     const result = await chatSession.sendMessage(activePrompt);
     const resText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
@@ -307,21 +569,97 @@ Only output the raw JSON. Not wrapped in markdown blocks.
     }
 
     // Apply DB Updates
-    if (aiData.updatedBudget || aiData.updatedTitle) {
+    const journeyUpdates: {
+      budget?: number | null;
+      title?: string;
+      destination?: string | null;
+      startDate?: Date | null;
+      endDate?: Date | null;
+      isFlexibleDates?: boolean;
+      flexibleDays?: number | null;
+      flexibleMonths?: string | null;
+      companions?: string | null;
+      preferences?: string | null;
+    } = {};
+
+    if (aiData.updatedBudget !== undefined) {
+      journeyUpdates.budget = aiData.updatedBudget;
+    }
+    if (aiData.updatedTitle) {
+      journeyUpdates.title = aiData.updatedTitle;
+    }
+    if (aiData.updatedDestination) {
+      journeyUpdates.destination = aiData.updatedDestination;
+    }
+    if (aiData.updatedStartDate) {
+      journeyUpdates.startDate = toDateOrNull(aiData.updatedStartDate);
+    }
+    if (aiData.updatedEndDate) {
+      journeyUpdates.endDate = toDateOrNull(aiData.updatedEndDate);
+    }
+    if (typeof aiData.updatedIsFlexibleDates === 'boolean') {
+      journeyUpdates.isFlexibleDates = aiData.updatedIsFlexibleDates;
+    }
+    if (typeof aiData.updatedFlexibleDays === 'number') {
+      journeyUpdates.flexibleDays = aiData.updatedFlexibleDays;
+    }
+    if (Array.isArray(aiData.updatedFlexibleMonths)) {
+      journeyUpdates.flexibleMonths = JSON.stringify(aiData.updatedFlexibleMonths);
+    }
+    if (aiData.updatedCompanions !== undefined) {
+      journeyUpdates.companions = aiData.updatedCompanions;
+    }
+    if (aiData.updatedPreferences !== undefined) {
+      journeyUpdates.preferences = aiData.updatedPreferences;
+    }
+
+    const dayTitles = Array.isArray(aiData.dayTitles) ? aiData.dayTitles : [];
+    const itineraryItems = Array.isArray(aiData.itinerary) ? aiData.itinerary : [];
+    const maxDayFromTitles = dayTitles.reduce(
+      (max: number, item: any) => Math.max(max, item.dayNumber || 0),
+      0
+    );
+    const maxDayFromItinerary = itineraryItems.reduce(
+      (max: number, item: any) => Math.max(max, item.dayNumber || 0),
+      0
+    );
+    const currentMaxDay = journey.days.reduce(
+      (max, day) => Math.max(max, day.dayNumber),
+      0
+    );
+    const targetMaxDay = Math.max(currentMaxDay, maxDayFromTitles, maxDayFromItinerary);
+
+    if (targetMaxDay > currentMaxDay) {
+      await prisma.journeyDay.createMany({
+        data: Array.from({ length: targetMaxDay - currentMaxDay }).map((_, i) => ({
+          journeyId: journey.id,
+          dayNumber: currentMaxDay + i + 1,
+          title: `Day ${currentMaxDay + i + 1}`
+        }))
+      });
+    }
+
+    for (const dayTitle of dayTitles) {
+      if (!dayTitle?.dayNumber) continue;
+      await prisma.journeyDay.updateMany({
+        where: { journeyId: journey.id, dayNumber: dayTitle.dayNumber },
+        data: { title: dayTitle.title || `Day ${dayTitle.dayNumber}` }
+      });
+    }
+
+    if (Object.keys(journeyUpdates).length > 0) {
       await prisma.journey.update({
         where: { id: journey.id },
-        data: {
-          budget: aiData.updatedBudget || journey.budget,
-          title: aiData.updatedTitle || journey.title,
-        }
+        data: journeyUpdates
       });
     }
 
     // Refresh Itinerary
-    if (aiData.itinerary && Array.isArray(aiData.itinerary)) {
+    if (Array.isArray(aiData.itinerary)) {
       await prisma.itineraryItem.deleteMany({ where: { journeyId: journey.id } });
-      for (const item of aiData.itinerary) {
-        if (!item.poiId) continue;
+      const validPoiIds = new Set(contextPois.map(poi => poi.id));
+      for (const item of itineraryItems) {
+        if (!item.poiId || !validPoiIds.has(item.poiId)) continue;
         await prisma.itineraryItem.create({
           data: {
             journeyId: journey.id,
@@ -336,6 +674,17 @@ Only output the raw JSON. Not wrapped in markdown blocks.
       }
     }
 
+    const shouldRename = chat.title.toLowerCase().includes('untitled');
+    const nextChatTitle =
+      aiData.updatedChatTitle ||
+      (shouldRename && aiData.updatedTitle ? aiData.updatedTitle : null);
+    if (nextChatTitle) {
+      await prisma.chat.update({
+        where: { id: chat.id },
+        data: { title: nextChatTitle }
+      });
+    }
+
     // Save AI Message
     if (aiData.aiText) {
       await prisma.message.create({
@@ -346,6 +695,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
     const updatedJourney = await prisma.journey.findUnique({
       where: { id: journey.id },
       include: {
+        days: { orderBy: { dayNumber: 'asc' } },
         itineraryItems: {
           include: { poi: { include: { tags: { include: { cluster: true } } } } },
           orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }]
