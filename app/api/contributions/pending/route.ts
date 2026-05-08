@@ -14,6 +14,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true }
+    });
+
+    if (dbUser?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
+
     const contributions = await prisma.contribution.findMany({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' }, // oldest first for fair review

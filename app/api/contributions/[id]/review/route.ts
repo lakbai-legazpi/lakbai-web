@@ -22,6 +22,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true }
+    });
+
+    if (dbUser?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Admins only' }, { status: 403 });
+    }
+
     const { id } = await params;
     const body: ReviewBody = await request.json();
     const { action, adminNotes } = body;

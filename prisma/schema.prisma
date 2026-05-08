@@ -7,6 +7,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id            String         @id
   email         String         @unique
@@ -23,6 +28,7 @@ model User {
   youtubeUrl    String?
   avatarOptions Json?
   avatarSeed    String?
+  role          Role           @default(USER)
   chats         Chat[]
   contributions Contribution[]
   journeys      Journey[]
