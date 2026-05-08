@@ -64,7 +64,7 @@ export function MarketingShell({
               <div className='flex flex-col items-start justify-between gap-4 border-t border-slate-200/60 pt-8 md:flex-row md:items-center'>
                 <div className='flex flex-col items-start gap-4 md:flex-row md:items-center md:gap-8'>
                   <TextBody className='text-text-muted font-medium'>
-                    (c) 2026 Lakbai
+                    © 2026 Lakbai
                   </TextBody>
                   <LegalActions />
                 </div>
