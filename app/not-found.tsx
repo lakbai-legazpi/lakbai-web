@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Home, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 export default function NotFound() {
   return (
