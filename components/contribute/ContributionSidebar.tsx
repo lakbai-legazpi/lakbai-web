@@ -11,7 +11,7 @@ import {
   MapPinPlusInside,
   Trash2,
   Upload,
-  X,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { TextBody, TextHeading } from '@/components/text';
@@ -85,8 +85,14 @@ export interface ContributionSidebarProps {
   onSubmit: (event: React.FormEvent) => void;
   onTogglePinMode: () => void;
   onClearPickedLocation: () => void;
-  onFormFieldChange: (field: keyof ContributionFormState, value: string) => void;
-  onAddressFieldChange: (field: keyof ContributionAddressForm, value: string) => void;
+  onFormFieldChange: (
+    field: keyof ContributionFormState,
+    value: string
+  ) => void;
+  onAddressFieldChange: (
+    field: keyof ContributionAddressForm,
+    value: string
+  ) => void;
   onCoordinateChange: (field: 'latitude' | 'longitude', value: string) => void;
   onToggleAddress: () => void;
   onToggleMedia: () => void;
@@ -104,7 +110,10 @@ export interface ContributionSidebarProps {
     value: string
   ) => void;
   onAddContactField: (field: keyof ContributionContactForm) => void;
-  onRemoveContactField: (field: keyof ContributionContactForm, index: number) => void;
+  onRemoveContactField: (
+    field: keyof ContributionContactForm,
+    index: number
+  ) => void;
 }
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -136,9 +145,10 @@ export function ContributionSidebar({
   onRemoveGalleryUpload,
   onContactFieldChange,
   onAddContactField,
-  onRemoveContactField,
+  onRemoveContactField
 }: ContributionSidebarProps) {
-  const hasCoordinates = form.latitude.trim().length > 0 && form.longitude.trim().length > 0;
+  const hasCoordinates =
+    form.latitude.trim().length > 0 && form.longitude.trim().length > 0;
 
   return (
     <aside className='bg-surface border-border flex h-full w-110 shrink-0 flex-col border-r'>
@@ -162,7 +172,7 @@ export function ContributionSidebar({
             'inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition',
             isPinModeEnabled
               ? 'bg-primary-500 text-white shadow-sm'
-              : 'border-border bg-background text-text-main border hover:bg-surface-light'
+              : 'border-border bg-background text-text-main hover:bg-surface-light border'
           )}
         >
           <MapPinPlusInside className='h-4 w-4' />
@@ -171,7 +181,8 @@ export function ContributionSidebar({
         {hasCoordinates && (
           <p className='text-text-muted mt-2 flex items-center gap-1.5 text-xs'>
             <MapPin className='text-primary-500 h-3.5 w-3.5 shrink-0' />
-            {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}
+            {Number(form.latitude).toFixed(5)},{' '}
+            {Number(form.longitude).toFixed(5)}
             <button
               type='button'
               onClick={onClearPickedLocation}
@@ -184,10 +195,16 @@ export function ContributionSidebar({
         )}
       </div>
 
-      <form onSubmit={onSubmit} className='flex flex-1 flex-col overflow-hidden'>
+      <form
+        onSubmit={onSubmit}
+        className='flex flex-1 flex-col overflow-hidden'
+      >
         <div className='flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4'>
           <div className='flex flex-col gap-1.5'>
-            <label className='text-text-main text-xs font-semibold' htmlFor='contrib-name'>
+            <label
+              className='text-text-main text-xs font-semibold'
+              htmlFor='contrib-name'
+            >
               Location Name <span className='text-error-500'>*</span>
             </label>
             <input
@@ -196,30 +213,38 @@ export function ContributionSidebar({
               required
               value={form.name}
               onChange={event => onFormFieldChange('name', event.target.value)}
-              className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm outline-none transition'
+              className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm transition outline-none'
             />
           </div>
 
           <div className='flex flex-col gap-1.5'>
-            <label className='text-text-main text-xs font-semibold' htmlFor='contrib-desc'>
+            <label
+              className='text-text-main text-xs font-semibold'
+              htmlFor='contrib-desc'
+            >
               Description
             </label>
             <textarea
               id='contrib-desc'
               rows={4}
               value={form.description}
-              onChange={event => onFormFieldChange('description', event.target.value)}
-              className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 resize-none rounded-lg border px-3 py-2 text-sm outline-none transition'
+              onChange={event =>
+                onFormFieldChange('description', event.target.value)
+              }
+              className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 resize-none rounded-lg border px-3 py-2 text-sm transition outline-none'
             />
           </div>
 
-          <div className='border-border rounded-lg border p-3 space-y-3 bg-surface-light'>
-            <p className='text-text-main text-xs font-semibold pb-1 border-b border-border'>
+          <div className='border-border bg-surface-light space-y-3 rounded-lg border p-3'>
+            <p className='text-text-main border-border border-b pb-1 text-xs font-semibold'>
               Primary Tag & Cluster
             </p>
             <div className='grid grid-cols-2 gap-3'>
               <div className='flex flex-col gap-1.5'>
-                <label className='text-text-main text-[11px] font-semibold' htmlFor='contrib-cluster'>
+                <label
+                  className='text-text-main text-[11px] font-semibold'
+                  htmlFor='contrib-cluster'
+                >
                   Cluster Name <span className='text-error-500'>*</span>
                 </label>
                 <AutocompleteInput
@@ -227,12 +252,17 @@ export function ContributionSidebar({
                   placeholder='e.g. Food, Nature'
                   required
                   value={form.primaryTagCluster}
-                  onValueChange={val => onFormFieldChange('primaryTagCluster', val)}
+                  onValueChange={val =>
+                    onFormFieldChange('primaryTagCluster', val)
+                  }
                   options={availableClusters}
                 />
               </div>
               <div className='flex flex-col gap-1.5'>
-                <label className='text-text-main text-[11px] font-semibold' htmlFor='contrib-tag'>
+                <label
+                  className='text-text-main text-[11px] font-semibold'
+                  htmlFor='contrib-tag'
+                >
                   Tag Name <span className='text-error-500'>*</span>
                 </label>
                 <AutocompleteInput
@@ -240,20 +270,25 @@ export function ContributionSidebar({
                   placeholder='e.g. Cafe, Park'
                   required
                   value={form.primaryTagName}
-                  onValueChange={val => onFormFieldChange('primaryTagName', val)}
+                  onValueChange={val =>
+                    onFormFieldChange('primaryTagName', val)
+                  }
                   options={availableTags}
                 />
               </div>
             </div>
-            <IconPicker 
+            <IconPicker
               value={form.primaryTagIcon}
-              onChange={(val) => onFormFieldChange('primaryTagIcon', val)}
+              onChange={val => onFormFieldChange('primaryTagIcon', val)}
             />
           </div>
 
           <div className='grid grid-cols-2 gap-3'>
             <div className='flex flex-col gap-1.5'>
-              <label className='text-text-main text-xs font-semibold' htmlFor='contrib-lat'>
+              <label
+                className='text-text-main text-xs font-semibold'
+                htmlFor='contrib-lat'
+              >
                 Latitude <span className='text-error-500'>*</span>
               </label>
               <input
@@ -262,12 +297,17 @@ export function ContributionSidebar({
                 step='any'
                 required
                 value={form.latitude}
-                onChange={event => onCoordinateChange('latitude', event.target.value)}
-                className='border-border text-text-main bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm outline-none transition'
+                onChange={event =>
+                  onCoordinateChange('latitude', event.target.value)
+                }
+                className='border-border text-text-main bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm transition outline-none'
               />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <label className='text-text-main text-xs font-semibold' htmlFor='contrib-lng'>
+              <label
+                className='text-text-main text-xs font-semibold'
+                htmlFor='contrib-lng'
+              >
                 Longitude <span className='text-error-500'>*</span>
               </label>
               <input
@@ -276,8 +316,10 @@ export function ContributionSidebar({
                 step='any'
                 required
                 value={form.longitude}
-                onChange={event => onCoordinateChange('longitude', event.target.value)}
-                className='border-border text-text-main bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm outline-none transition'
+                onChange={event =>
+                  onCoordinateChange('longitude', event.target.value)
+                }
+                className='border-border text-text-main bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm transition outline-none'
               />
             </div>
           </div>
@@ -295,7 +337,7 @@ export function ContributionSidebar({
                   onChange={event =>
                     onContactFieldChange('websites', index, event.target.value)
                   }
-                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs outline-none transition'
+                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
                 />
                 <button
                   type='button'
@@ -322,9 +364,13 @@ export function ContributionSidebar({
                   placeholder='+63 900 000 0000'
                   value={phone}
                   onChange={event =>
-                    onContactFieldChange('phoneNumbers', index, event.target.value)
+                    onContactFieldChange(
+                      'phoneNumbers',
+                      index,
+                      event.target.value
+                    )
                   }
-                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs outline-none transition'
+                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
                 />
                 <button
                   type='button'
@@ -352,7 +398,11 @@ export function ContributionSidebar({
               className='text-text-main flex w-full items-center justify-between px-3 py-2.5 text-xs font-semibold'
             >
               Address Details
-              {showAddress ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+              {showAddress ? (
+                <ChevronUp className='h-3.5 w-3.5' />
+              ) : (
+                <ChevronDown className='h-3.5 w-3.5' />
+              )}
             </button>
             {showAddress && (
               <div className='border-border grid grid-cols-2 gap-2 border-t p-3'>
@@ -366,19 +416,24 @@ export function ContributionSidebar({
                     ['barangay', 'Barangay'],
                     ['cityMunicipality', 'City/Municipality'],
                     ['province', 'Province'],
-                    ['postalCode', 'Postal Code'],
+                    ['postalCode', 'Postal Code']
                   ] as [keyof ContributionAddressForm, string][]
                 ).map(([field, label]) => (
                   <div key={field} className='flex flex-col gap-1'>
-                    <label className='text-text-muted text-xs' htmlFor={`contrib-address-${field}`}>
+                    <label
+                      className='text-text-muted text-xs'
+                      htmlFor={`contrib-address-${field}`}
+                    >
                       {label}
                     </label>
                     <input
                       id={`contrib-address-${field}`}
                       type='text'
                       value={form.address[field]}
-                      onChange={event => onAddressFieldChange(field, event.target.value)}
-                      className='border-border text-text-main bg-background focus:border-primary-400 rounded-md border px-2.5 py-1.5 text-xs outline-none transition'
+                      onChange={event =>
+                        onAddressFieldChange(field, event.target.value)
+                      }
+                      className='border-border text-text-main bg-background focus:border-primary-400 rounded-md border px-2.5 py-1.5 text-xs transition outline-none'
                     />
                   </div>
                 ))}
@@ -393,7 +448,11 @@ export function ContributionSidebar({
               className='text-text-main flex w-full items-center justify-between px-3 py-2.5 text-xs font-semibold'
             >
               Gallery Images
-              {showMedia ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+              {showMedia ? (
+                <ChevronUp className='h-3.5 w-3.5' />
+              ) : (
+                <ChevronDown className='h-3.5 w-3.5' />
+              )}
             </button>
             {showMedia && (
               <div className='border-border space-y-3 border-t p-3'>
@@ -415,13 +474,18 @@ export function ContributionSidebar({
                       Uploaded images (preview + filename)
                     </p>
                     {form.galleryUploads.map(upload => (
-                      <div key={upload.id} className='bg-background flex items-center gap-2 rounded-lg border px-2 py-2 text-xs'>
+                      <div
+                        key={upload.id}
+                        className='bg-background flex items-center gap-2 rounded-lg border px-2 py-2 text-xs'
+                      >
                         <img
                           src={upload.dataUrl}
                           alt={upload.fileName}
                           className='h-12 w-12 shrink-0 rounded-md object-cover'
                         />
-                        <p className='flex-1 truncate pr-2'>{upload.fileName}</p>
+                        <p className='flex-1 truncate pr-2'>
+                          {upload.fileName}
+                        </p>
                         <button
                           type='button'
                           onClick={() => onRemoveGalleryUpload(upload.id)}
@@ -445,19 +509,32 @@ export function ContributionSidebar({
               className='text-text-main flex w-full items-center justify-between px-3 py-2.5 text-xs font-semibold'
             >
               Operating Hours
-              {showHours ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+              {showHours ? (
+                <ChevronUp className='h-3.5 w-3.5' />
+              ) : (
+                <ChevronDown className='h-3.5 w-3.5' />
+              )}
             </button>
             {showHours && (
               <div className='border-border space-y-2 border-t p-3'>
                 {form.operatingHours.map(hour => (
-                  <div key={hour.dayOfWeek} className='grid grid-cols-[36px_1fr_1fr_auto_auto] items-center gap-2'>
-                    <span className='text-text-muted text-xs'>{dayLabels[hour.dayOfWeek]}</span>
+                  <div
+                    key={hour.dayOfWeek}
+                    className='grid grid-cols-[36px_1fr_1fr_auto_auto] items-center gap-2'
+                  >
+                    <span className='text-text-muted text-xs'>
+                      {dayLabels[hour.dayOfWeek]}
+                    </span>
                     <input
                       type='time'
                       value={hour.openTime}
                       disabled={hour.isClosed || hour.is24Hours}
                       onChange={event =>
-                        onOperatingHoursChange(hour.dayOfWeek, 'openTime', event.target.value)
+                        onOperatingHoursChange(
+                          hour.dayOfWeek,
+                          'openTime',
+                          event.target.value
+                        )
                       }
                       className='border-border text-text-main bg-background disabled:bg-muted rounded border px-2 py-1 text-xs'
                     />
@@ -466,7 +543,11 @@ export function ContributionSidebar({
                       value={hour.closeTime}
                       disabled={hour.isClosed || hour.is24Hours}
                       onChange={event =>
-                        onOperatingHoursChange(hour.dayOfWeek, 'closeTime', event.target.value)
+                        onOperatingHoursChange(
+                          hour.dayOfWeek,
+                          'closeTime',
+                          event.target.value
+                        )
                       }
                       className='border-border text-text-main bg-background disabled:bg-muted rounded border px-2 py-1 text-xs'
                     />
@@ -475,7 +556,11 @@ export function ContributionSidebar({
                         type='checkbox'
                         checked={hour.is24Hours}
                         onChange={event =>
-                          onOperatingHoursChange(hour.dayOfWeek, 'is24Hours', event.target.checked)
+                          onOperatingHoursChange(
+                            hour.dayOfWeek,
+                            'is24Hours',
+                            event.target.checked
+                          )
                         }
                       />
                       24h
@@ -485,7 +570,11 @@ export function ContributionSidebar({
                         type='checkbox'
                         checked={hour.isClosed}
                         onChange={event =>
-                          onOperatingHoursChange(hour.dayOfWeek, 'isClosed', event.target.checked)
+                          onOperatingHoursChange(
+                            hour.dayOfWeek,
+                            'isClosed',
+                            event.target.checked
+                          )
                         }
                       />
                       Closed
@@ -523,7 +612,9 @@ export function ContributionSidebar({
             disabled={submitStatus === 'loading' || submitStatus === 'success'}
             className='bg-primary-500 hover:bg-primary-600 flex flex-[2] items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60'
           >
-            {submitStatus === 'loading' && <Loader2 className='h-4 w-4 animate-spin' />}
+            {submitStatus === 'loading' && (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            )}
             {mode === 'edit' ? 'Submit Edit' : 'Submit New POI'}
           </button>
         </div>

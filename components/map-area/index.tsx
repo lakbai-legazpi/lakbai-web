@@ -38,7 +38,7 @@ export default function MapArea({
   isRoutingActive = false,
   routeOrderMap
 }: MapAreaProps) {
-  const { pois, isLoading: isPoisLoading } = usePois();
+  const { pois, isLoading: isPoisLoading, refreshPois } = usePois();
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isAddLocationMode, setIsAddLocationMode] = useState(false);
@@ -250,6 +250,9 @@ export default function MapArea({
           copied={copied}
           onClose={handleClosePoi}
           onCopyShareUrl={handleCopyShareUrl}
+          onReviewSubmitted={() => {
+            void refreshPois();
+          }}
           portalContainer={overlayContainerRef?.current}
           panelMode={isContribute}
         />

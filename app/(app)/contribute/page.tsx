@@ -1,7 +1,9 @@
 'use client';
 
 import { ChangeEvent, useMemo, useRef, useState } from 'react';
-import ContributeMapArea, { type PickedLocation } from '@/components/map-area/ContributeMapArea';
+import ContributeMapArea, {
+  type PickedLocation
+} from '@/components/map-area/ContributeMapArea';
 import { usePois } from '@/components/map-area/use-pois';
 import type { MapRef } from '@/components/ui/map';
 import type { POI } from '@/components/map-area/types';
@@ -12,7 +14,7 @@ import {
   type ContributionFormState,
   type ContributionGalleryUpload,
   type ContributionOperatingHourForm,
-  type SubmitStatus,
+  type SubmitStatus
 } from '@/components/contribute/ContributionSidebar';
 
 const dayIndexes = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -23,7 +25,7 @@ function createInitialOperatingHours(): ContributionOperatingHourForm[] {
     openTime: '',
     closeTime: '',
     isClosed: false,
-    is24Hours: false,
+    is24Hours: false
   }));
 }
 
@@ -37,14 +39,14 @@ function createInitialAddress(): ContributionAddressForm {
     barangay: '',
     cityMunicipality: '',
     province: '',
-    postalCode: '',
+    postalCode: ''
   };
 }
 
 function createInitialContact(): ContributionContactForm {
   return {
     websites: [''],
-    phoneNumbers: [''],
+    phoneNumbers: ['']
   };
 }
 
@@ -60,7 +62,7 @@ function createInitialForm(): ContributionFormState {
     address: createInitialAddress(),
     operatingHours: createInitialOperatingHours(),
     galleryUploads: [],
-    contact: createInitialContact(),
+    contact: createInitialContact()
   };
 }
 
@@ -76,7 +78,9 @@ function getFileNameFromImageUrl(imageUrl: string): string {
 
 function mapPoiToForm(poi: POI): ContributionFormState {
   const mappedHours = createInitialOperatingHours().map(baseHour => {
-    const existingHour = poi.operatingHours.find(hour => hour.dayOfWeek === baseHour.dayOfWeek);
+    const existingHour = poi.operatingHours.find(
+      hour => hour.dayOfWeek === baseHour.dayOfWeek
+    );
     if (!existingHour) return baseHour;
 
     return {
@@ -84,12 +88,14 @@ function mapPoiToForm(poi: POI): ContributionFormState {
       openTime: existingHour.openTime ?? '',
       closeTime: existingHour.closeTime ?? '',
       isClosed: existingHour.isClosed,
-      is24Hours: existingHour.is24Hours,
+      is24Hours: existingHour.is24Hours
     };
   });
 
-  const primaryTag = poi.tags?.find(t => t.id === poi.primaryTagId) || poi.tags?.[0];
-  const primaryIcon = primaryTag?.iconName ?? primaryTag?.cluster?.iconName ?? '';
+  const primaryTag =
+    poi.tags?.find(t => t.id === poi.primaryTagId) || poi.tags?.[0];
+  const primaryIcon =
+    primaryTag?.iconName ?? primaryTag?.cluster?.iconName ?? '';
   const primaryTagName = primaryTag?.name ?? '';
   const primaryTagCluster = primaryTag?.cluster?.name ?? '';
 
@@ -110,7 +116,7 @@ function mapPoiToForm(poi: POI): ContributionFormState {
       barangay: poi.address?.barangay ?? '',
       cityMunicipality: poi.address?.cityMunicipality ?? '',
       province: poi.address?.province ?? '',
-      postalCode: poi.address?.postalCode ?? '',
+      postalCode: poi.address?.postalCode ?? ''
     },
     operatingHours: mappedHours,
     galleryUploads: poi.galleries.map(gallery => ({
@@ -118,9 +124,9 @@ function mapPoiToForm(poi: POI): ContributionFormState {
       fileName: getFileNameFromImageUrl(gallery.imageUrl),
       mimeType: '',
       size: 0,
-      dataUrl: gallery.imageUrl,
+      dataUrl: gallery.imageUrl
     })),
-    contact: createInitialContact(),
+    contact: createInitialContact()
   };
 }
 
@@ -143,7 +149,9 @@ export default function ContributePage() {
   const { pois } = usePois();
 
   const [isPinModeEnabled, setIsPinModeEnabled] = useState(false);
-  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(
+    null
+  );
   const [editingPoi, setEditingPoi] = useState<POI | null>(null);
   const [form, setForm] = useState<ContributionFormState>(createInitialForm);
   const [showAddress, setShowAddress] = useState(false);
@@ -163,7 +171,7 @@ export default function ContributePage() {
     setForm(previousForm => ({
       ...previousForm,
       latitude: latitude.toString(),
-      longitude: longitude.toString(),
+      longitude: longitude.toString()
     }));
     setPickedLocation({ latitude, longitude });
   };
@@ -181,25 +189,37 @@ export default function ContributePage() {
     setErrorMessage('');
   };
 
-  const handleFormFieldChange = (field: keyof ContributionFormState, value: string) => {
+  const handleFormFieldChange = (
+    field: keyof ContributionFormState,
+    value: string
+  ) => {
     setForm(previousForm => ({ ...previousForm, [field]: value }));
   };
 
-  const handleAddressFieldChange = (field: keyof ContributionAddressForm, value: string) => {
+  const handleAddressFieldChange = (
+    field: keyof ContributionAddressForm,
+    value: string
+  ) => {
     setForm(previousForm => ({
       ...previousForm,
-      address: { ...previousForm.address, [field]: value },
+      address: { ...previousForm.address, [field]: value }
     }));
   };
 
-  const handleCoordinateChange = (field: 'latitude' | 'longitude', value: string) => {
+  const handleCoordinateChange = (
+    field: 'latitude' | 'longitude',
+    value: string
+  ) => {
     setForm(previousForm => {
       const updatedForm = { ...previousForm, [field]: value };
       const parsedLatitude = parseCoordinate(updatedForm.latitude);
       const parsedLongitude = parseCoordinate(updatedForm.longitude);
 
       if (parsedLatitude !== null && parsedLongitude !== null) {
-        setPickedLocation({ latitude: parsedLatitude, longitude: parsedLongitude });
+        setPickedLocation({
+          latitude: parsedLatitude,
+          longitude: parsedLongitude
+        });
       }
 
       return updatedForm;
@@ -216,14 +236,26 @@ export default function ContributePage() {
       operatingHours: previousForm.operatingHours.map(hour => {
         if (hour.dayOfWeek !== dayOfWeek) return hour;
         if (field === 'isClosed' && value === true) {
-          return { ...hour, isClosed: true, is24Hours: false, openTime: '', closeTime: '' };
+          return {
+            ...hour,
+            isClosed: true,
+            is24Hours: false,
+            openTime: '',
+            closeTime: ''
+          };
         }
         if (field === 'is24Hours' && value === true) {
-          return { ...hour, is24Hours: true, isClosed: false, openTime: '', closeTime: '' };
+          return {
+            ...hour,
+            is24Hours: true,
+            isClosed: false,
+            openTime: '',
+            closeTime: ''
+          };
         }
 
         return { ...hour, [field]: value };
-      }),
+      })
     }));
   };
 
@@ -246,10 +278,11 @@ export default function ContributePage() {
             fileName: file.name,
             mimeType: file.type,
             size: file.size,
-            dataUrl: result,
+            dataUrl: result
           });
         };
-        fileReader.onerror = () => reject(new Error('Failed to read uploaded file.'));
+        fileReader.onerror = () =>
+          reject(new Error('Failed to read uploaded file.'));
         fileReader.readAsDataURL(file);
       });
     });
@@ -258,7 +291,7 @@ export default function ContributePage() {
       const uploads = await Promise.all(uploadPromises);
       setForm(previousForm => ({
         ...previousForm,
-        galleryUploads: [...previousForm.galleryUploads, ...uploads],
+        galleryUploads: [...previousForm.galleryUploads, ...uploads]
       }));
     } catch {
       setSubmitStatus('error');
@@ -271,7 +304,9 @@ export default function ContributePage() {
   const handleRemoveGalleryUpload = (id: string) => {
     setForm(previousForm => ({
       ...previousForm,
-      galleryUploads: previousForm.galleryUploads.filter(upload => upload.id !== id),
+      galleryUploads: previousForm.galleryUploads.filter(
+        upload => upload.id !== id
+      )
     }));
   };
 
@@ -286,8 +321,8 @@ export default function ContributePage() {
         ...previousForm.contact,
         [field]: previousForm.contact[field].map((entry, entryIndex) =>
           entryIndex === index ? value : entry
-        ),
-      },
+        )
+      }
     }));
   };
 
@@ -296,12 +331,15 @@ export default function ContributePage() {
       ...previousForm,
       contact: {
         ...previousForm.contact,
-        [field]: [...previousForm.contact[field], ''],
-      },
+        [field]: [...previousForm.contact[field], '']
+      }
     }));
   };
 
-  const handleRemoveContactField = (field: keyof ContributionContactForm, index: number) => {
+  const handleRemoveContactField = (
+    field: keyof ContributionContactForm,
+    index: number
+  ) => {
     setForm(previousForm => ({
       ...previousForm,
       contact: {
@@ -309,8 +347,10 @@ export default function ContributePage() {
         [field]:
           previousForm.contact[field].length <= 1
             ? ['']
-            : previousForm.contact[field].filter((_, entryIndex) => entryIndex !== index),
-      },
+            : previousForm.contact[field].filter(
+                (_, entryIndex) => entryIndex !== index
+              )
+      }
     }));
   };
 
@@ -331,7 +371,7 @@ export default function ContributePage() {
     setForm(previousForm => ({
       ...previousForm,
       latitude: '',
-      longitude: '',
+      longitude: ''
     }));
   };
 
@@ -370,23 +410,29 @@ export default function ContributePage() {
       address: cleanAddress,
       contact: {
         websites: form.contact.websites.map(cleanString).filter(Boolean),
-        phoneNumbers: form.contact.phoneNumbers.map(cleanString).filter(Boolean),
+        phoneNumbers: form.contact.phoneNumbers.map(cleanString).filter(Boolean)
       },
       galleries: {
         uploads: form.galleryUploads.map(upload => ({
           fileName: upload.fileName,
           mimeType: upload.mimeType,
           size: upload.size,
-          dataUrl: upload.dataUrl,
-        })),
+          dataUrl: upload.dataUrl
+        }))
       },
       operatingHours: form.operatingHours.map(hour => ({
         dayOfWeek: hour.dayOfWeek,
-        openTime: hour.isClosed || hour.is24Hours ? undefined : cleanString(hour.openTime),
-        closeTime: hour.isClosed || hour.is24Hours ? undefined : cleanString(hour.closeTime),
+        openTime:
+          hour.isClosed || hour.is24Hours
+            ? undefined
+            : cleanString(hour.openTime),
+        closeTime:
+          hour.isClosed || hour.is24Hours
+            ? undefined
+            : cleanString(hour.closeTime),
         isClosed: hour.isClosed,
-        is24Hours: hour.is24Hours,
-      })),
+        is24Hours: hour.is24Hours
+      }))
     };
 
     try {
@@ -396,8 +442,8 @@ export default function ContributePage() {
         body: JSON.stringify({
           type: mode === 'edit' ? 'UPDATE' : 'CREATE',
           poiId: editingPoi?.id ?? undefined,
-          proposedData,
-        }),
+          proposedData
+        })
       });
 
       if (!response.ok) {
@@ -408,13 +454,21 @@ export default function ContributePage() {
       setSubmitStatus('success');
       setTimeout(handleReset, 2500);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Something went wrong.'
+      );
       setSubmitStatus('error');
     }
   };
 
-  const availableClusters = Array.from(new Set(pois.flatMap(poi => poi.tags.map(t => t.cluster?.name).filter(Boolean)))) as string[];
-  const availableTags = Array.from(new Set(pois.flatMap(poi => poi.tags.map(t => t.name).filter(Boolean)))) as string[];
+  const availableClusters = Array.from(
+    new Set(
+      pois.flatMap(poi => poi.tags.map(t => t.cluster?.name).filter(Boolean))
+    )
+  ) as string[];
+  const availableTags = Array.from(
+    new Set(pois.flatMap(poi => poi.tags.map(t => t.name).filter(Boolean)))
+  ) as string[];
 
   return (
     <div className='relative flex h-full w-full overflow-hidden'>
@@ -432,7 +486,9 @@ export default function ContributePage() {
         availableTags={availableTags}
         onReset={handleReset}
         onSubmit={handleSubmit}
-        onTogglePinMode={() => setIsPinModeEnabled(previousValue => !previousValue)}
+        onTogglePinMode={() =>
+          setIsPinModeEnabled(previousValue => !previousValue)
+        }
         onClearPickedLocation={handleClearPickedLocation}
         onFormFieldChange={handleFormFieldChange}
         onAddressFieldChange={handleAddressFieldChange}

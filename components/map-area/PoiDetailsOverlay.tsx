@@ -143,6 +143,7 @@ type PoiDetailsOverlayProps = {
   copied: boolean;
   onClose: () => void;
   onCopyShareUrl: () => void;
+  onReviewSubmitted?: () => void;
   portalContainer?: HTMLElement | null;
   panelMode?: boolean;
 };
@@ -152,17 +153,29 @@ export default function PoiDetailsOverlay({
   copied,
   onClose,
   onCopyShareUrl,
+  onReviewSubmitted,
   portalContainer,
   panelMode = false
 }: PoiDetailsOverlayProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const [localReviews, setLocalReviews] = useState(poi.reviews ?? []);
+  const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewContent, setReviewContent] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveTab('description');
     setIsGalleryOpen(false);
     setIsDetailsExpanded(false);
+    setLocalReviews(poi.reviews ?? []);
+    setIsReviewFormOpen(false);
+    setReviewRating(0);
+    setReviewContent('');
+    setReviewError(null);
   }, [poi.id]);
 
   const galleryImages = useMemo(
@@ -181,6 +194,50 @@ export default function PoiDetailsOverlay({
       return;
     }
     setIsGalleryOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (isSubmittingReview) return;
+
+    const trimmedContent = reviewContent.trim();
+    if (!reviewRating) {
+      setReviewError('Please select a rating.');
+      return;
+    }
+    if (!trimmedContent) {
+      setReviewError('Please write a review.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewError(null);
+
+    try {
+      const res = await fetch(`/api/pois/${poi.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: reviewRating, content: trimmedContent })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setReviewError(data?.error || 'Failed to submit review.');
+        return;
+      }
+
+      if (data?.review) {
+        setLocalReviews(prev => [data.review, ...prev]);
+        setReviewContent('');
+        setReviewRating(0);
+        setIsReviewFormOpen(false);
+        onReviewSubmitted?.();
+      }
+    } catch (error) {
+      console.error(error);
+      setReviewError('Failed to submit review.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   // Format the address beautifully, dropping null values gracefully
@@ -224,7 +281,7 @@ export default function PoiDetailsOverlay({
   );
 
   const { averageRating, reviewCount } = useMemo(() => {
-    const reviews = poi.reviews || [];
+    const reviews = localReviews || [];
     if (reviews.length === 0) return { averageRating: 0, reviewCount: 0 };
 
     const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
@@ -232,7 +289,7 @@ export default function PoiDetailsOverlay({
       averageRating: (sum / reviews.length).toFixed(1),
       reviewCount: reviews.length
     };
-  }, [poi.reviews]);
+  }, [localReviews]);
 
   const overlayContent = (
     <div
@@ -627,15 +684,99 @@ export default function PoiDetailsOverlay({
             <div className='mb-4 flex justify-end'>
               <button
                 type='button'
+                onClick={() => {
+                  setIsReviewFormOpen(true);
+                  setReviewError(null);
+                }}
                 className='border-foreground/40 text-foreground inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-medium'
               >
                 <PlusCircle className='h-4 w-4' /> Add a review
               </button>
             </div>
 
+            {isReviewFormOpen && (
+              <div className='border-border bg-surface mb-5 rounded-2xl border p-4'>
+                <div className='flex items-center justify-between gap-3'>
+                  <TextBody className='text-text-main font-semibold'>
+                    Your review
+                  </TextBody>
+                  <button
+                    type='button'
+                    onClick={() => setIsReviewFormOpen(false)}
+                    className='text-text-muted hover:text-text-main text-sm'
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div className='mt-3 flex items-center gap-2'>
+                  <span className='text-text-muted text-sm'>Rating</span>
+                  <div className='flex items-center gap-1'>
+                    {Array.from({ length: 5 }).map((_, index) => {
+                      const value = index + 1;
+                      const isActive = value <= reviewRating;
+                      return (
+                        <button
+                          key={value}
+                          type='button'
+                          onClick={() => setReviewRating(value)}
+                          className='rounded-full p-1'
+                          aria-label={`Rate ${value} star${value > 1 ? 's' : ''}`}
+                        >
+                          <Star
+                            className={cn(
+                              'h-5 w-5',
+                              isActive
+                                ? 'text-primary-500 fill-current'
+                                : 'text-text-muted'
+                            )}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {reviewRating > 0 && (
+                    <span className='text-text-muted text-xs'>
+                      {reviewRating}/5
+                    </span>
+                  )}
+                </div>
+
+                <textarea
+                  value={reviewContent}
+                  onChange={event => setReviewContent(event.target.value)}
+                  placeholder='Share your experience...'
+                  rows={4}
+                  className='border-border text-text-main placeholder:text-text-muted mt-3 w-full rounded-xl border bg-transparent p-3 text-sm outline-none'
+                />
+
+                {reviewError && (
+                  <p className='mt-2 text-sm text-red-600'>{reviewError}</p>
+                )}
+
+                <div className='mt-3 flex justify-end gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => setIsReviewFormOpen(false)}
+                    className='border-border text-text-main hover:bg-surface rounded-full border px-4 py-2 text-sm'
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type='button'
+                    onClick={handleSubmitReview}
+                    disabled={isSubmittingReview}
+                    className='bg-primary-600 hover:bg-primary-700 rounded-full px-4 py-2 text-sm text-white disabled:opacity-60'
+                  >
+                    {isSubmittingReview ? 'Submitting...' : 'Submit review'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className='space-y-4'>
-              {poi.reviews && poi.reviews.length > 0 ? (
-                poi.reviews.map(review => {
+              {localReviews && localReviews.length > 0 ? (
+                localReviews.map(review => {
                   const fullName =
                     [review.user?.firstName, review.user?.lastName]
                       .filter(Boolean)
@@ -651,11 +792,11 @@ export default function PoiDetailsOverlay({
                     <article key={review.id} className='border-b pb-4'>
                       <div className='flex items-start justify-between'>
                         <div className='flex items-center gap-3'>
-                          <UserAvatar 
-                            seed={review.user.avatarSeed} 
-                            options={review.user.avatarOptions} 
-                            className='h-12 w-12' 
-                            size={120} 
+                          <UserAvatar
+                            seed={review.user.avatarSeed}
+                            options={review.user.avatarOptions}
+                            className='h-12 w-12'
+                            size={120}
                           />
                           <div>
                             <p className='font-semibold'>{fullName}</p>
@@ -683,12 +824,12 @@ export default function PoiDetailsOverlay({
               )}
             </div>
 
-            {poi.reviews && poi.reviews.length > 0 && (
+            {localReviews && localReviews.length > 0 && (
               <button
                 type='button'
                 className='border-foreground/40 text-foreground mt-5 rounded-full border px-4 py-1.5 text-sm'
               >
-                Show all {poi.reviews.length} reviews
+                Show all {localReviews.length} reviews
               </button>
             )}
           </div>
