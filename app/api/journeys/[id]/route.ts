@@ -11,6 +11,79 @@ type UpdateJourneyBody = {
   budget?: number | null;
 };
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    if (!id?.trim()) {
+      return NextResponse.json({ error: 'Missing journeyId.' }, { status: 400 });
+    }
+
+    const journey = await prisma.journey.findFirst({
+      where: { id, userId: user.id },
+      include: {
+        days: { orderBy: { dayNumber: 'asc' } },
+        itineraryItems: {
+          include: {
+            poi: {
+              include: {
+                tags: { include: { cluster: true } },
+                galleries: true,
+                address: true,
+                operatingHours: true,
+                links: true,
+                reviews: {
+                  include: {
+                    user: {
+                      select: {
+                        name: true,
+                        firstName: true,
+                        lastName: true,
+                        avatarSeed: true,
+                        avatarOptions: true
+                      }
+                    }
+                  },
+                  orderBy: { createdAt: 'desc' }
+                }
+              }
+            }
+          },
+          orderBy: [
+            { dayNumber: 'asc' },
+            { startTime: 'asc' },
+            { orderIndex: 'asc' }
+          ]
+        }
+      }
+    });
+
+    if (!journey) {
+      return NextResponse.json({ error: 'Journey not found.' }, { status: 404 });
+    }
+
+    return NextResponse.json({ journey });
+  } catch (error) {
+    console.error('Failed to fetch journey', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch journey.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

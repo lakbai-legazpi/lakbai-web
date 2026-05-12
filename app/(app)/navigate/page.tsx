@@ -1,82 +1,283 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import NavArea from './_components/nav-area';
 import MapArea from '@/components/map-area';
-import { usePois } from '@/components/map-area/use-pois';
 import type { POI } from '@/components/map-area/types';
+
+type JourneySummary = {
+  id: string;
+  title: string;
+  destination: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  updatedAt: string;
+};
+
+type JourneyDetail = {
+  id: string;
+  title: string;
+  destination: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  days: {
+    id: string;
+    dayNumber: number;
+    title: string | null;
+  }[];
+  itineraryItems: JourneyItineraryItem[];
+};
+
+type JourneyItineraryItem = {
+  id: string;
+  dayNumber: number | null;
+  orderIndex: number;
+  startTime: string | null;
+  poi: POI;
+};
+
+type JourneyDayResolved = {
+  id: string;
+  dayNumber: number;
+  title: string | null;
+  date?: string;
+  pois: POI[];
+};
+
+const formatJourneyDate = (date: Date) =>
+  date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+
+const normalizePoi = (poi: POI): POI => ({
+  ...poi,
+  latitude: Number(poi.latitude),
+  longitude: Number(poi.longitude),
+  vouchCount: Number(poi.vouchCount),
+  priceLevel: poi.priceLevel ?? null,
+  primaryTagId: poi.primaryTagId ?? null,
+  tags: poi.tags || [],
+  galleries: poi.galleries || [],
+  address: poi.address || null,
+  operatingHours: poi.operatingHours || [],
+  phoneNumber: poi.phoneNumber ?? null,
+  email: poi.email ?? null,
+  links: poi.links || [],
+  reviews: poi.reviews || []
+});
+
+const compareItineraryItems = (
+  a: JourneyItineraryItem,
+  b: JourneyItineraryItem
+) => {
+  const dayA = a.dayNumber ?? Number.MAX_SAFE_INTEGER;
+  const dayB = b.dayNumber ?? Number.MAX_SAFE_INTEGER;
+  if (dayA !== dayB) return dayA - dayB;
+
+  if (a.startTime && b.startTime) {
+    return a.startTime.localeCompare(b.startTime);
+  }
+
+  if (a.startTime) return -1;
+  if (b.startTime) return 1;
+
+  return a.orderIndex - b.orderIndex;
+};
 
 export default function NavigatePage() {
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const contentContainerRef = useRef<HTMLDivElement | null>(null);
-  const { pois } = usePois();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     []
   );
+  const [journeys, setJourneys] = useState<JourneySummary[]>([]);
+  const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
+  const [activeJourney, setActiveJourney] = useState<JourneyDetail | null>(
+    null
+  );
+  const [isJourneysLoading, setIsJourneysLoading] = useState(true);
+  const [isJourneyLoading, setIsJourneyLoading] = useState(false);
 
-  type JourneyDay = {
-    id: string;
-    dayNumber: number;
-    date?: string;
-    pois: {
-      id: string;
-    }[];
-  };
+  const journeyParam = searchParams.get('journey');
 
-  const [journeyDays, setJourneyDays] = useState<JourneyDay[]>([
-    {
-      id: 'day-1',
-      dayNumber: 1,
-      date: 'Tue, Jul 21',
-      pois: [
-        { id: 'cmod13rjk000234i4c8qz95xl' },
-        { id: 'cmod145b5001634i439yccb28' }
-      ]
-    },
-    {
-      id: 'day-2',
-      dayNumber: 2,
-      date: 'Wed, Jul 22',
-      pois: [{ id: 'cmod13ub6000a34i41kjxja3d' }]
+  useEffect(() => {
+    let isActive = true;
+
+    async function fetchJourneys() {
+      setIsJourneysLoading(true);
+      try {
+        const res = await fetch('/api/journeys');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!isActive) return;
+        setJourneys(data.journeys || []);
+      } catch (err) {
+        console.error('Failed to load journeys', err);
+        if (isActive) setJourneys([]);
+      } finally {
+        if (isActive) setIsJourneysLoading(false);
+      }
     }
-  ]);
 
-  const poiMap = useMemo(() => {
-    return new Map(pois.map(p => [p.id, p]));
-  }, [pois]);
+    fetchJourneys();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (journeys.length === 0) {
+      setActiveJourneyId(null);
+      setActiveJourney(null);
+      return;
+    }
+
+    if (journeyParam && journeys.some(journey => journey.id === journeyParam)) {
+      setActiveJourneyId(journeyParam);
+      return;
+    }
+
+    if (
+      !activeJourneyId ||
+      !journeys.some(journey => journey.id === activeJourneyId)
+    ) {
+      setActiveJourneyId(journeys[0]?.id ?? null);
+    }
+  }, [journeys, journeyParam, activeJourneyId]);
+
+  useEffect(() => {
+    if (!activeJourneyId) {
+      setActiveJourney(null);
+      return;
+    }
+
+    let isActive = true;
+
+    async function fetchJourney() {
+      setActiveJourney(null);
+      setIsJourneyLoading(true);
+      try {
+        const res = await fetch(`/api/journeys/${activeJourneyId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!isActive) return;
+        setActiveJourney(data.journey ?? null);
+      } catch (err) {
+        console.error('Failed to load journey', err);
+        if (isActive) setActiveJourney(null);
+      } finally {
+        if (isActive) setIsJourneyLoading(false);
+      }
+    }
+
+    fetchJourney();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeJourneyId]);
+
+  const normalizedItineraryItems = useMemo(() => {
+    if (!activeJourney?.itineraryItems?.length) return [];
+    return activeJourney.itineraryItems.map(item => ({
+      ...item,
+      poi: normalizePoi(item.poi)
+    }));
+  }, [activeJourney]);
+
+  const orderedItems = useMemo(() => {
+    const scheduledItems = normalizedItineraryItems.filter(
+      item => item.dayNumber !== null
+    );
+    return [...scheduledItems].sort(compareItineraryItems);
+  }, [normalizedItineraryItems]);
 
   const journeyPois = useMemo(() => {
-    return journeyDays.flatMap(day =>
-      day.pois.map(p => poiMap.get(p.id)).filter((p): p is POI => Boolean(p))
-    );
-  }, [journeyDays, poiMap]);
+    const seen = new Set<string>();
+    const unique: POI[] = [];
+    orderedItems.forEach(item => {
+      if (seen.has(item.poi.id)) return;
+      seen.add(item.poi.id);
+      unique.push(item.poi);
+    });
+    return unique;
+  }, [orderedItems]);
 
-  const resolvedJourneyDays = useMemo(() => {
-    return journeyDays.map(day => ({
-      ...day,
-      pois: day.pois
-        .map(p => poiMap.get(p.id))
-        .filter((p): p is POI => Boolean(p))
-    }));
-  }, [journeyDays, poiMap]);
+  const resolvedJourneyDays = useMemo<JourneyDayResolved[]>(() => {
+    if (!activeJourney) return [];
+
+    const groupedItems = new Map<number, JourneyItineraryItem[]>();
+    orderedItems.forEach(item => {
+      if (item.dayNumber === null) return;
+      const list = groupedItems.get(item.dayNumber) ?? [];
+      list.push(item);
+      groupedItems.set(item.dayNumber, list);
+    });
+
+    groupedItems.forEach(items => items.sort(compareItineraryItems));
+
+    const daysSource = activeJourney.days.length
+      ? activeJourney.days
+      : Array.from(groupedItems.keys())
+          .sort((a, b) => a - b)
+          .map(dayNumber => ({
+            id: `day-${dayNumber}`,
+            dayNumber,
+            title: `Day ${dayNumber}`
+          }));
+
+    const startDate = activeJourney.startDate
+      ? new Date(activeJourney.startDate)
+      : null;
+
+    return daysSource
+      .slice()
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .map(day => {
+        const date = startDate
+          ? formatJourneyDate(
+              new Date(startDate.getTime() + (day.dayNumber - 1) * 86400000)
+            )
+          : undefined;
+        return {
+          id: day.id,
+          dayNumber: day.dayNumber,
+          title: day.title,
+          date,
+          pois: (groupedItems.get(day.dayNumber) ?? []).map(item => item.poi)
+        };
+      });
+  }, [activeJourney, orderedItems]);
 
   const routeOrderMap = useMemo(() => {
     const map: Record<string, number> = {};
-    let counter = 1;
-
-    journeyDays.forEach(day => {
-      day.pois.forEach(p => {
-        map[p.id] = counter++;
-      });
+    orderedItems.forEach((item, index) => {
+      if (map[item.poi.id]) return;
+      map[item.poi.id] = index + 1;
     });
-
     return map;
-  }, [journeyDays]);
+  }, [orderedItems]);
 
   const journeyKey = useMemo(() => {
-    return journeyPois.map(p => p.id).join('-');
-  }, [journeyPois]);
+    const ids = journeyPois.map(p => p.id).join('-');
+    return activeJourneyId ? `${activeJourneyId}-${ids}` : ids;
+  }, [activeJourneyId, journeyPois]);
+
+  const handleSelectJourney = (journeyId: string) => {
+    setActiveJourneyId(journeyId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('journey', journeyId);
+    router.replace(`?${params.toString()}`, {
+      scroll: false
+    });
+  };
 
   useEffect(() => {
     if (journeyPois.length < 2) {
@@ -121,7 +322,7 @@ export default function NavigatePage() {
     }
 
     fetchRoute();
-  }, [journeyKey]);
+  }, [journeyKey, journeyPois]);
 
   return (
     <div
@@ -137,7 +338,15 @@ export default function NavigatePage() {
             : 'w-[40%] border-r opacity-100'
         )}
       >
-        <NavArea journeyDays={resolvedJourneyDays} />
+        <NavArea
+          journeys={journeys}
+          activeJourneyId={activeJourneyId}
+          onSelectJourney={handleSelectJourney}
+          journeyDays={resolvedJourneyDays}
+          routeOrderMap={routeOrderMap}
+          isJourneysLoading={isJourneysLoading}
+          isJourneyLoading={isJourneyLoading}
+        />
       </div>
 
       {/* Map Area (60%) */}

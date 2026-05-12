@@ -87,6 +87,8 @@ export default function PoiMapCanvas({
           poi.primaryTagId
         );
         const isSelected = selectedPoiId === poi.id;
+        const routeOrder = routeOrderMap?.[poi.id];
+        const isFirstRoute = routeOrder === 1;
 
         return (
           <MapMarker
@@ -105,12 +107,15 @@ export default function PoiMapCanvas({
                 className={cn(
                   'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-lg transition-transform hover:scale-110',
                   markerCircleClassName ?? color,
+                  isFirstRoute &&
+                    !isSelected &&
+                    'ring-primary-500 ring-2 ring-offset-1',
                   isSelected && 'ring-primary-500 ring-2 ring-offset-1'
                 )}
               >
                 {isRoutingActive ? (
                   <span className='text-xs font-bold text-white'>
-                    {routeOrderMap?.[poi.id] ?? ''}
+                    {routeOrder ?? ''}
                   </span>
                 ) : (
                   <Icon className='h-4 w-4 text-white' />
