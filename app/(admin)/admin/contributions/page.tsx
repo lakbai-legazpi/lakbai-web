@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CheckCircle,
   XCircle,
@@ -9,16 +9,17 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  Loader2,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Toast } from '@/app/(app)/_components/Notificaiton';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type ContributionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-type ContributionType   = 'CREATE'  | 'UPDATE';
+type ContributionType = 'CREATE' | 'UPDATE';
 
 type Contributor = {
   id: string;
@@ -52,14 +53,34 @@ function formatDate(iso: string) {
 }
 
 function StatusBadge({ status }: { status: ContributionStatus }) {
-  const map: Record<ContributionStatus, { label: string; className: string; icon: typeof Clock }> = {
-    PENDING:  { label: 'Pending',  className: 'bg-warning-100 text-warning-700',  icon: Clock },
-    APPROVED: { label: 'Approved', className: 'bg-success-100 text-success-700',  icon: CheckCircle },
-    REJECTED: { label: 'Rejected', className: 'bg-error-100 text-error-700',      icon: XCircle },
+  const map: Record<
+    ContributionStatus,
+    { label: string; className: string; icon: typeof Clock }
+  > = {
+    PENDING: {
+      label: 'Pending',
+      className: 'bg-warning-100 text-warning-700',
+      icon: Clock
+    },
+    APPROVED: {
+      label: 'Approved',
+      className: 'bg-success-100 text-success-700',
+      icon: CheckCircle
+    },
+    REJECTED: {
+      label: 'Rejected',
+      className: 'bg-error-100 text-error-700',
+      icon: XCircle
+    }
   };
   const { label, className, icon: Icon } = map[status];
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', className)}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        className
+      )}
+    >
       <Icon className='h-3 w-3' />
       {label}
     </span>
@@ -72,19 +93,26 @@ function StatusBadge({ status }: { status: ContributionStatus }) {
 
 function ContributionCard({
   contribution,
-  onReview,
+  onReview
 }: {
   contribution: Contribution;
-  onReview: (id: string, action: 'APPROVE' | 'REJECT', notes?: string) => Promise<void>;
+  onReview: (
+    id: string,
+    action: 'APPROVE' | 'REJECT',
+    notes?: string
+  ) => Promise<void>;
 }) {
-  const [expanded,   setExpanded]   = useState(false);
-  const [notes,      setNotes]      = useState('');
-  const [isLoading,  setIsLoading]  = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAction = async (action: 'APPROVE' | 'REJECT') => {
     setIsLoading(true);
-    await onReview(contribution.id, action, notes.trim() || undefined);
-    setIsLoading(false);
+    try {
+      await onReview(contribution.id, action, notes.trim() || undefined);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const d = contribution.proposedData;
@@ -98,7 +126,7 @@ function ContributionCard({
           <div className='flex items-center gap-2'>
             <span
               className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                'rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
                 contribution.type === 'CREATE'
                   ? 'bg-primary-100 text-primary-700'
                   : 'bg-secondary-100 text-secondary-700'
@@ -121,8 +149,12 @@ function ContributionCard({
         </div>
 
         <div className='flex flex-col items-end gap-1 text-right'>
-          <p className='text-text-muted text-xs'>{contribution.user.name ?? contribution.user.email}</p>
-          <p className='text-text-muted text-xs'>{formatDate(contribution.createdAt)}</p>
+          <p className='text-text-muted text-xs'>
+            {contribution.user.name ?? contribution.user.email}
+          </p>
+          <p className='text-text-muted text-xs'>
+            {formatDate(contribution.createdAt)}
+          </p>
         </div>
       </div>
 
@@ -141,7 +173,11 @@ function ContributionCard({
           className='text-text-muted hover:text-text-main flex w-full items-center justify-between px-5 py-2 text-xs font-medium transition'
         >
           View proposed data
-          {expanded ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+          {expanded ? (
+            <ChevronUp className='h-3.5 w-3.5' />
+          ) : (
+            <ChevronDown className='h-3.5 w-3.5' />
+          )}
         </button>
 
         {expanded && (
@@ -159,7 +195,7 @@ function ContributionCard({
             placeholder='Admin notes (optional — visible on rejection)'
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            className='border-border text-text-main placeholder:text-text-muted bg-surface focus:border-primary-400 resize-none rounded-lg border px-3 py-2 text-xs outline-none transition'
+            className='border-border text-text-main placeholder:text-text-muted bg-surface focus:border-primary-400 resize-none rounded-lg border px-3 py-2 text-xs transition outline-none'
           />
           <div className='flex gap-2'>
             <button
@@ -168,7 +204,11 @@ function ContributionCard({
               onClick={() => handleAction('REJECT')}
               className='flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50'
             >
-              {isLoading ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <XCircle className='h-3.5 w-3.5' />}
+              {isLoading ? (
+                <Loader2 className='h-3.5 w-3.5 animate-spin' />
+              ) : (
+                <XCircle className='h-3.5 w-3.5' />
+              )}
               Reject
             </button>
             <button
@@ -177,7 +217,11 @@ function ContributionCard({
               onClick={() => handleAction('APPROVE')}
               className='bg-success-500 hover:bg-success-600 flex flex-[2] items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white transition disabled:opacity-50'
             >
-              {isLoading ? <Loader2 className='h-3.5 w-3.5 animate-spin' /> : <CheckCircle className='h-3.5 w-3.5' />}
+              {isLoading ? (
+                <Loader2 className='h-3.5 w-3.5 animate-spin' />
+              ) : (
+                <CheckCircle className='h-3.5 w-3.5' />
+              )}
               Approve &amp; Publish
             </button>
           </div>
@@ -188,7 +232,9 @@ function ContributionCard({
       {!isPending && contribution.adminNotes && (
         <div className='border-border border-t px-5 py-3'>
           <p className='text-text-muted text-xs font-semibold'>Admin Notes</p>
-          <p className='text-text-main mt-0.5 text-xs'>{contribution.adminNotes}</p>
+          <p className='text-text-main mt-0.5 text-xs'>
+            {contribution.adminNotes}
+          </p>
         </div>
       )}
     </article>
@@ -201,8 +247,26 @@ function ContributionCard({
 
 export default function AdminPage() {
   const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [isLoading,     setIsLoading]     = useState(true);
-  const [error,         setError]         = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error') => {
+      setToast({ message, type });
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = window.setTimeout(() => {
+        setToast(null);
+      }, 3000);
+    },
+    []
+  );
 
   const fetchPending = useCallback(async () => {
     setIsLoading(true);
@@ -213,31 +277,54 @@ export default function AdminPage() {
       const data = await res.json();
       setContributions(data.contributions ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const message =
+        err instanceof Error ? err.message : 'Something went wrong';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     void fetchPending();
   }, [fetchPending]);
 
-  const handleReview = async (id: string, action: 'APPROVE' | 'REJECT', notes?: string) => {
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleReview = async (
+    id: string,
+    action: 'APPROVE' | 'REJECT',
+    notes?: string
+  ) => {
     try {
       const res = await fetch(`/api/contributions/${id}/review`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, adminNotes: notes }),
+        body: JSON.stringify({ action, adminNotes: notes })
       });
       if (!res.ok) {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         throw new Error(d.error ?? 'Review failed');
       }
       // Optimistically remove from the pending list
       setContributions(prev => prev.filter(c => c.id !== id));
+      showToast(
+        action === 'APPROVE'
+          ? 'Contribution approved and published.'
+          : 'Contribution rejected.',
+        'success'
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Review failed');
+      const message = err instanceof Error ? err.message : 'Review failed';
+      showToast(message, 'error');
+      throw err;
     }
   };
 
@@ -247,9 +334,12 @@ export default function AdminPage() {
         {/* Page Header */}
         <div className='mb-8 flex items-center justify-between'>
           <div>
-            <h1 className='text-text-main text-2xl font-bold'>Contribution Review</h1>
+            <h1 className='text-text-main text-2xl font-bold'>
+              Contribution Review
+            </h1>
             <p className='text-text-muted mt-1 text-sm'>
-              {contributions.length} pending contribution{contributions.length !== 1 ? 's' : ''}
+              {contributions.length} pending contribution
+              {contributions.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button
@@ -280,7 +370,9 @@ export default function AdminPage() {
           <div className='border-border rounded-xl border border-dashed px-5 py-16 text-center'>
             <CheckCircle className='text-success-400 mx-auto h-10 w-10' />
             <p className='text-text-main mt-3 font-semibold'>All caught up!</p>
-            <p className='text-text-muted mt-1 text-sm'>No pending contributions to review.</p>
+            <p className='text-text-muted mt-1 text-sm'>
+              No pending contributions to review.
+            </p>
           </div>
         )}
 
@@ -296,6 +388,11 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+      <Toast
+        isOpen={Boolean(toast)}
+        message={toast?.message ?? ''}
+        type={toast?.type ?? 'success'}
+      />
     </div>
   );
 }
