@@ -104,6 +104,9 @@ export default function JourneyArea({
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>(
     {}
   );
+  const [isItineraryCollapsed, setIsItineraryCollapsed] = useState(false);
+  const [undoStack, setUndoStack] = useState<JourneyAreaItineraryItem[][]>([]);
+  const [redoStack, setRedoStack] = useState<JourneyAreaItineraryItem[][]>([]);
   const [renameModal, setRenameModal] = useState<{
     isOpen: boolean;
     dayId: string;
@@ -123,6 +126,11 @@ export default function JourneyArea({
       setDays(journey.days);
     }
   }, [journey?.itineraryItems, journey?.days]);
+
+  useEffect(() => {
+    setUndoStack([]);
+    setRedoStack([]);
+  }, [journey?.id]);
 
   // Group items by day
   const groupedItinerary = useMemo(() => {
@@ -166,9 +174,97 @@ export default function JourneyArea({
   const totalItems = items.length;
   const totalBasecampItems = groupedItinerary.basecamp.length;
 
+  const cloneItems = (list: JourneyAreaItineraryItem[]) =>
+    list.map(item => ({ ...item }));
+
+  const recordHistory = () => {
+    setUndoStack(prev => {
+      const next = [...prev, cloneItems(items)];
+      if (next.length > 30) next.shift();
+      return next;
+    });
+    setRedoStack([]);
+  };
+
+  const triggerToast = (message: string) => {
+    setToastConfig({ isOpen: true, message });
+    window.setTimeout(() => {
+      setToastConfig(prev => ({ ...prev, isOpen: false }));
+    }, 2500);
+  };
+
+  const persistItemChanges = async (
+    currentList: JourneyAreaItineraryItem[],
+    nextList: JourneyAreaItineraryItem[]
+  ) => {
+    const currentMap = new Map(currentList.map(item => [item.id, item]));
+    const updates = nextList.filter(item => {
+      const existing = currentMap.get(item.id);
+      if (!existing) return false;
+      return (
+        existing.dayNumber !== item.dayNumber ||
+        existing.orderIndex !== item.orderIndex ||
+        existing.startTime !== item.startTime ||
+        existing.endTime !== item.endTime
+      );
+    });
+
+    if (updates.length === 0) return;
+
+    try {
+      await Promise.all(
+        updates.map(item =>
+          fetch(`/api/itinerary-items/${item.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              dayNumber: item.dayNumber,
+              orderIndex: item.orderIndex,
+              startTime: item.startTime,
+              endTime: item.endTime
+            })
+          })
+        )
+      );
+      router.refresh();
+      window.dispatchEvent(new Event('journey-updated'));
+    } catch (e) {
+      console.error('Failed to persist undo/redo changes', e);
+    }
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    const currentSnapshot = cloneItems(items);
+    setUndoStack(prev => prev.slice(0, -1));
+    setRedoStack(prev => [...prev, currentSnapshot]);
+    setItems(previous);
+    void persistItemChanges(items, previous);
+    triggerToast('Undid last change');
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    const currentSnapshot = cloneItems(items);
+    setRedoStack(prev => prev.slice(0, -1));
+    setUndoStack(prev => [...prev, currentSnapshot]);
+    setItems(next);
+    void persistItemChanges(items, next);
+    triggerToast('Redid last change');
+  };
+
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
 
     // Determine target day
     let newDayNumber: number | null = null;
@@ -246,6 +342,7 @@ export default function JourneyArea({
       return i;
     });
 
+    recordHistory();
     setItems(updatedItems);
 
     // Persist
@@ -289,6 +386,7 @@ export default function JourneyArea({
       }
     }
 
+    recordHistory();
     setItems(prev =>
       prev.map(i =>
         i.id === itemId
@@ -315,6 +413,7 @@ export default function JourneyArea({
   };
 
   const handleMoveToBasecamp = async (itemId: string) => {
+    recordHistory();
     setItems(prev =>
       prev.map(i =>
         i.id === itemId
@@ -504,13 +603,33 @@ export default function JourneyArea({
         </div>
 
         <div className='flex items-center gap-2'>
-          <button className='border-text-main text-text-main hover:bg-surface flex h-7 w-7 items-center justify-center rounded-full border'>
+          <button
+            type='button'
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            className='border-text-main text-text-main hover:bg-surface flex h-7 w-7 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:opacity-50'
+          >
             <Undo2 size={15} strokeWidth={1.5} />
           </button>
-          <button className='border-text-main text-text-main hover:bg-surface flex h-7 w-7 items-center justify-center rounded-full border'>
+          <button
+            type='button'
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            className='border-text-main text-text-main hover:bg-surface flex h-7 w-7 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:opacity-50'
+          >
             <Redo2 size={15} strokeWidth={1.5} />
           </button>
-          <button className='border-text-main hover:bg-surface flex h-7 items-center gap-1.5 rounded-3xl border px-3 font-medium'>
+          <button
+            type='button'
+            onClick={() => {
+              if (!journey?.id) return;
+              router.push(
+                `/navigate?journey=${encodeURIComponent(journey.id)}`
+              );
+            }}
+            disabled={!journey?.id}
+            className='border-text-main hover:bg-surface flex h-7 items-center gap-1.5 rounded-3xl border px-3 font-medium disabled:cursor-not-allowed disabled:opacity-50'
+          >
             <Navigation
               size={14}
               className='fill-primary-500 text-primary-600'
@@ -623,8 +742,21 @@ export default function JourneyArea({
             {/* Itinerary Section */}
             <div className='mb-4'>
               <div className='mb-4 flex items-center justify-between'>
-                <div className='flex items-center'>
-                  <div className='flex w-7 items-center justify-start' />
+                <button
+                  type='button'
+                  onClick={() => setIsItineraryCollapsed(prev => !prev)}
+                  className='flex items-center text-left'
+                >
+                  <div className='flex w-7 items-center justify-start'>
+                    <ChevronDown
+                      size={20}
+                      strokeWidth={2}
+                      className={cn(
+                        'text-foreground transition-transform',
+                        isItineraryCollapsed && '-rotate-90'
+                      )}
+                    />
+                  </div>
                   <TextBody className='text-foreground text-[15px] font-bold'>
                     Itinerary
                   </TextBody>
@@ -632,208 +764,220 @@ export default function JourneyArea({
                     {totalItems - totalBasecampItems} item
                     {totalItems - totalBasecampItems !== 1 ? 's' : ''}
                   </TextBody>
-                </div>
+                </button>
               </div>
 
-              {days.length === 0 ? (
-                <div className='text-text-muted pl-7 text-sm'>
-                  Please set travel dates to plan your itinerary.
-                </div>
-              ) : (
-                days.map((day, index) => {
-                  const dayNumber = day.dayNumber;
-                  const isDayCollapsed = collapsedDays[day.id] ?? false;
-                  return (
-                    <div key={`day-${day.id}`} className='group relative mb-6'>
-                      <div className='mb-3 flex items-center justify-between'>
-                        <button
-                          type='button'
-                          onClick={() => toggleDayCollapse(day.id)}
-                          className='flex items-center text-left'
+              {!isItineraryCollapsed && (
+                <>
+                  {days.length === 0 ? (
+                    <div className='text-text-muted pl-7 text-sm'>
+                      Please set travel dates to plan your itinerary.
+                    </div>
+                  ) : (
+                    days.map((day, index) => {
+                      const dayNumber = day.dayNumber;
+                      const isDayCollapsed = collapsedDays[day.id] ?? false;
+                      return (
+                        <div
+                          key={`day-${day.id}`}
+                          className='group relative mb-6'
                         >
-                          <div className='flex w-7 items-center justify-start'>
-                            <ChevronDown
-                              size={20}
-                              strokeWidth={2}
-                              className={cn(
-                                'text-foreground transition-transform',
-                                isDayCollapsed && '-rotate-90'
-                              )}
-                            />
-                          </div>
-                          <TextBody className='text-foreground text-[15px] font-bold'>
-                            {day.title || `Day ${dayNumber}`}
-                          </TextBody>
-                          <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
-                            {
-                              (groupedItinerary.scheduledDays[dayNumber] || [])
-                                .length
-                            }{' '}
-                            items
-                          </TextBody>
-                        </button>
-
-                        {/* Day Action Menu */}
-                        <div className='relative'>
-                          <button
-                            onClick={() =>
-                              setActiveDayDropdown(
-                                activeDayDropdown === day.id ? null : day.id
-                              )
-                            }
-                            className='text-text-muted hover:text-foreground hover:bg-surface rounded-full p-1.5 transition-colors'
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-
-                          {activeDayDropdown === day.id && (
-                            <>
-                              <div
-                                className='fixed inset-0 z-40'
-                                onClick={() => setActiveDayDropdown(null)}
-                              />
-                              <div className='bg-background border-border absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
-                                <button
-                                  onClick={() => {
-                                    setRenameModal({
-                                      isOpen: true,
-                                      dayId: day.id,
-                                      initialName: day.title || ''
-                                    });
-                                    setActiveDayDropdown(null);
-                                  }}
-                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                                >
-                                  Rename Day
-                                </button>
-                                <button
-                                  onClick={() => handleClearDay(dayNumber)}
-                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                                >
-                                  Clear day
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    setActiveDayDropdown(null);
-                                    await fetch(
-                                      `/api/journeys/${journey?.id}/days`,
-                                      {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                          action: 'add-before',
-                                          dayNumber: day.dayNumber
-                                        })
-                                      }
-                                    );
-                                    router.refresh();
-                                    window.dispatchEvent(
-                                      new Event('journey-updated')
-                                    );
-                                  }}
-                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                                >
-                                  Add Day Before
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    setActiveDayDropdown(null);
-                                    await fetch(
-                                      `/api/journeys/${journey?.id}/days`,
-                                      {
-                                        method: 'POST',
-                                        headers: {
-                                          'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                          action: 'add-after',
-                                          dayNumber: day.dayNumber
-                                        })
-                                      }
-                                    );
-                                    router.refresh();
-                                    window.dispatchEvent(
-                                      new Event('journey-updated')
-                                    );
-                                  }}
-                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                                >
-                                  Add Day After
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveDayDropdown(null);
-                                    setDeleteModal({
-                                      isOpen: true,
-                                      dayId: day.id
-                                    });
-                                  }}
-                                  className='border-border mt-1 w-full border-t px-4 py-2 pt-1 text-left text-sm text-red-600 transition-colors hover:bg-red-50'
-                                >
-                                  Remove Day
-                                </button>
+                          <div className='mb-3 flex items-center justify-between'>
+                            <button
+                              type='button'
+                              onClick={() => toggleDayCollapse(day.id)}
+                              className='flex items-center text-left'
+                            >
+                              <div className='flex w-7 items-center justify-start'>
+                                <ChevronDown
+                                  size={20}
+                                  strokeWidth={2}
+                                  className={cn(
+                                    'text-foreground transition-transform',
+                                    isDayCollapsed && '-rotate-90'
+                                  )}
+                                />
                               </div>
-                            </>
+                              <TextBody className='text-foreground text-[15px] font-bold'>
+                                {day.title || `Day ${dayNumber}`}
+                              </TextBody>
+                              <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
+                                {
+                                  (
+                                    groupedItinerary.scheduledDays[dayNumber] ||
+                                    []
+                                  ).length
+                                }{' '}
+                                items
+                              </TextBody>
+                            </button>
+
+                            {/* Day Action Menu */}
+                            <div className='relative'>
+                              <button
+                                onClick={() =>
+                                  setActiveDayDropdown(
+                                    activeDayDropdown === day.id ? null : day.id
+                                  )
+                                }
+                                className='text-text-muted hover:text-foreground hover:bg-surface rounded-full p-1.5 transition-colors'
+                              >
+                                <MoreHorizontal size={18} />
+                              </button>
+
+                              {activeDayDropdown === day.id && (
+                                <>
+                                  <div
+                                    className='fixed inset-0 z-40'
+                                    onClick={() => setActiveDayDropdown(null)}
+                                  />
+                                  <div className='bg-background border-border absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
+                                    <button
+                                      onClick={() => {
+                                        setRenameModal({
+                                          isOpen: true,
+                                          dayId: day.id,
+                                          initialName: day.title || ''
+                                        });
+                                        setActiveDayDropdown(null);
+                                      }}
+                                      className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                    >
+                                      Rename Day
+                                    </button>
+                                    <button
+                                      onClick={() => handleClearDay(dayNumber)}
+                                      className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                    >
+                                      Clear day
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        setActiveDayDropdown(null);
+                                        await fetch(
+                                          `/api/journeys/${journey?.id}/days`,
+                                          {
+                                            method: 'POST',
+                                            headers: {
+                                              'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                              action: 'add-before',
+                                              dayNumber: day.dayNumber
+                                            })
+                                          }
+                                        );
+                                        router.refresh();
+                                        window.dispatchEvent(
+                                          new Event('journey-updated')
+                                        );
+                                      }}
+                                      className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                    >
+                                      Add Day Before
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        setActiveDayDropdown(null);
+                                        await fetch(
+                                          `/api/journeys/${journey?.id}/days`,
+                                          {
+                                            method: 'POST',
+                                            headers: {
+                                              'Content-Type': 'application/json'
+                                            },
+                                            body: JSON.stringify({
+                                              action: 'add-after',
+                                              dayNumber: day.dayNumber
+                                            })
+                                          }
+                                        );
+                                        router.refresh();
+                                        window.dispatchEvent(
+                                          new Event('journey-updated')
+                                        );
+                                      }}
+                                      className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                    >
+                                      Add Day After
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setActiveDayDropdown(null);
+                                        setDeleteModal({
+                                          isOpen: true,
+                                          dayId: day.id
+                                        });
+                                      }}
+                                      className='border-border mt-1 w-full border-t px-4 py-2 pt-1 text-left text-sm text-red-600 transition-colors hover:bg-red-50'
+                                    >
+                                      Remove Day
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Droppable Day Area */}
+                          {!isDayCollapsed && (
+                            <Droppable droppableId={`day-${dayNumber}`}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.droppableProps}
+                                  className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
+                                >
+                                  {(
+                                    groupedItinerary.scheduledDays[dayNumber] ||
+                                    []
+                                  ).map((item, itemIndex) => (
+                                    <ItineraryItemCard
+                                      key={item.id}
+                                      item={item}
+                                      index={itemIndex}
+                                      journey={journey || null}
+                                      onMoveToBasecamp={handleMoveToBasecamp}
+                                      onDelete={handleDelete}
+                                    />
+                                  ))}
+                                  {provided.placeholder}
+
+                                  {(
+                                    groupedItinerary.scheduledDays[dayNumber] ||
+                                    []
+                                  ).length === 0 &&
+                                    !snapshot.isDraggingOver && (
+                                      <div className='text-text-muted/60 py-2 pl-2 text-xs italic'>
+                                        Drag items here...
+                                      </div>
+                                    )}
+                                </div>
+                              )}
+                            </Droppable>
                           )}
                         </div>
-                      </div>
+                      );
+                    })
+                  )}
 
-                      {/* Droppable Day Area */}
-                      {!isDayCollapsed && (
-                        <Droppable droppableId={`day-${dayNumber}`}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                              className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
-                            >
-                              {(
-                                groupedItinerary.scheduledDays[dayNumber] || []
-                              ).map((item, itemIndex) => (
-                                <ItineraryItemCard
-                                  key={item.id}
-                                  item={item}
-                                  index={itemIndex}
-                                  journey={journey || null}
-                                  onMoveToBasecamp={handleMoveToBasecamp}
-                                  onDelete={handleDelete}
-                                />
-                              ))}
-                              {provided.placeholder}
-
-                              {(groupedItinerary.scheduledDays[dayNumber] || [])
-                                .length === 0 &&
-                                !snapshot.isDraggingOver && (
-                                  <div className='text-text-muted/60 py-2 pl-2 text-xs italic'>
-                                    Drag items here...
-                                  </div>
-                                )}
-                            </div>
-                          )}
-                        </Droppable>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-
-              {days.length > 0 && (
-                <button
-                  onClick={async () => {
-                    await fetch(`/api/journeys/${journey?.id}/days`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ action: 'add-end' })
-                    });
-                    router.refresh();
-                    window.dispatchEvent(new Event('journey-updated'));
-                  }}
-                  className='border-border hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 text-text-muted ml-7 flex w-[calc(100%-28px)] items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition-colors'
-                >
-                  <PlusCircle size={16} /> Add Day
-                </button>
+                  {days.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        await fetch(`/api/journeys/${journey?.id}/days`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'add-end' })
+                        });
+                        router.refresh();
+                        window.dispatchEvent(new Event('journey-updated'));
+                      }}
+                      className='border-border hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 text-text-muted ml-7 flex w-[calc(100%-28px)] items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition-colors'
+                    >
+                      <PlusCircle size={16} /> Add Day
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

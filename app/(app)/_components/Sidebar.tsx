@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { TextSubheading } from '@/components/text';
+import NotificationsPanel from './NotificationsPanel';
 import {
   MessageCircle,
   Luggage,
@@ -32,6 +33,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [collapsedMenuTop, setCollapsedMenuTop] = useState<number | null>(null);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const iconTooltipClass =
     'pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-primary-dark-700 bg-primary-dark-900 px-2.5 py-1.5 text-xs font-medium text-primary-dark-50 opacity-0 shadow-sm transition-opacity';
   const pathname = usePathname();
@@ -56,6 +58,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   useEffect(() => {
     if (previousPathnameRef.current !== pathname) {
       closeChatPopup();
+      setIsNotificationsOpen(false);
       previousPathnameRef.current = pathname;
     }
   }, [pathname]);
@@ -353,7 +356,11 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
         {/* Notifications */}
         <button
           type='button'
-          onClick={closeChatPopup}
+          onClick={() => {
+            closeChatPopup();
+            setIsProfileMenuOpen(false);
+            setIsNotificationsOpen(prev => !prev);
+          }}
           className={cn(
             'group/notify text-text-muted relative flex items-center transition-colors hover:bg-slate-100',
             isCollapsed
@@ -379,6 +386,17 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
             Notifications
           </span>
         </button>
+        {isNotificationsOpen && (
+          <div
+            className='fixed inset-0 z-30'
+            onClick={() => setIsNotificationsOpen(false)}
+          />
+        )}
+        <NotificationsPanel
+          open={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+          className='absolute top-0 bottom-0 left-full z-40'
+        />
         {/* Profile */}
         <div ref={profileMenuRef} className='relative'>
           {isProfileMenuOpen && (

@@ -49,7 +49,39 @@ function shuffle<T>(items: T[]): T[] {
   return cloned;
 }
 
+function normalizePriceLevel(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 0 ? value : null;
+  }
+
+  if (typeof value === 'bigint') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  if (
+    value &&
+    typeof (value as { toString?: () => string }).toString === 'function'
+  ) {
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+}
+
 function normalizePoi(poi: Partial<POI>): POI {
+  const rawPriceLevel =
+    (poi as any).priceLevel ??
+    (poi as any).price_level ??
+    (poi as any).budget ??
+    null;
+
   return {
     id: poi.id ?? '',
     name: poi.name ?? '',
@@ -57,6 +89,7 @@ function normalizePoi(poi: Partial<POI>): POI {
     latitude: Number(poi.latitude ?? 0),
     longitude: Number(poi.longitude ?? 0),
     vouchCount: Number(poi.vouchCount ?? 0),
+    priceLevel: normalizePriceLevel(rawPriceLevel),
     primaryTagId: poi.primaryTagId ?? null,
     tags: poi.tags ?? [],
     galleries: poi.galleries ?? [],
@@ -191,7 +224,11 @@ export default function ExploreArea() {
       return searchedPois;
     }
 
-    return searchedPois.filter(poi => poi.priceLevel === selectedBudget);
+    const targetLevel = Number(selectedBudget);
+
+    return searchedPois.filter(
+      poi => poi.priceLevel !== null && poi.priceLevel === targetLevel
+    );
   }, [searchedPois, selectedBudget]);
 
   const visiblePois = useMemo(() => {
@@ -230,10 +267,6 @@ export default function ExploreArea() {
     const nextPath = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     router.replace(nextPath, { scroll: false });
   };
-
-  const selectedBudgetLabel =
-    budgetFilterOptions.find(option => option.value === selectedBudget)
-      ?.label ?? 'All budgets';
 
   return (
     <div className='scrollbar-invisible bg-surface text-text-main h-full w-full overflow-y-auto'>
@@ -297,12 +330,6 @@ export default function ExploreArea() {
           </div>
         </div>
 
-        {selectedBudget !== 'all' && (
-          <div className='text-text-muted mb-4 text-sm'>
-            Showing {selectedBudgetLabel} POIs only.
-          </div>
-        )}
-
         <div className='mb-7 flex flex-wrap items-center gap-2.5'>
           {categories.map(category => {
             const isActive = activeCategory === category;
@@ -349,7 +376,7 @@ export default function ExploreArea() {
 
           {!isLoading && !error && visiblePois.length === 0 && (
             <div className='text-text-muted rounded-xl border border-dashed p-6 text-sm'>
-              No POIs matched this filter.
+              No locations matched your filters.
             </div>
           )}
 
