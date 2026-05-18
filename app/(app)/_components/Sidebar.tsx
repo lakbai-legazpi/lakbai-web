@@ -223,9 +223,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               ? 'h-12 w-12 justify-center rounded-xl'
               : 'w-full rounded-lg px-3 py-3',
             pathname.startsWith('/journey')
-              ? isCollapsed
-                ? 'bg-primary-50 text-primary-600'
-                : 'text-primary-600 bg-transparent'
+              ? 'bg-primary-50 text-primary-600'
               : 'text-text-muted hover:text-text-main hover:bg-slate-100'
           )}
         >
@@ -257,9 +255,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               ? 'h-12 w-12 justify-center rounded-xl'
               : 'w-full rounded-lg px-3 py-3',
             pathname.startsWith('/explore')
-              ? isCollapsed
-                ? 'bg-primary-50 text-primary-600'
-                : 'text-primary-600 bg-transparent'
+              ? 'bg-primary-50 text-primary-600'
               : 'text-text-muted hover:text-text-main hover:bg-slate-100'
           )}
         >
@@ -291,9 +287,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               ? 'h-12 w-12 justify-center rounded-xl'
               : 'w-full rounded-lg px-3 py-3',
             pathname.startsWith('/navigate')
-              ? isCollapsed
-                ? 'bg-primary-50 text-primary-600'
-                : 'text-primary-600 bg-transparent'
+              ? 'bg-primary-50 text-primary-600'
               : 'text-text-muted hover:text-text-main hover:bg-slate-100'
           )}
         >
@@ -325,9 +319,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               ? 'h-12 w-12 justify-center rounded-xl'
               : 'w-full rounded-lg px-3 py-3',
             pathname.startsWith('/contribute')
-              ? isCollapsed
-                ? 'bg-primary-50 text-primary-600'
-                : 'text-primary-600 bg-transparent'
+              ? 'bg-primary-50 text-primary-600'
               : 'text-text-muted hover:text-text-main hover:bg-slate-100'
           )}
         >

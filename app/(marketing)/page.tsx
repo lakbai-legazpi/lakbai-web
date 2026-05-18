@@ -57,7 +57,7 @@ export default async function LandingPage() {
           <section className='relative flex min-h-[75vh] flex-col justify-center px-6 pt-32 pb-16'>
             <div className='mx-auto w-full max-w-7xl'>
               <div className='max-w-5xl text-left'>
-                <TextDisplay className='mb-6 tracking-tighter text-slate-900 md:mb-8 md:text-[100px] md:leading-[0.95]'>
+                <TextDisplay className='mb-6 tracking-tighter text-slate-900 py-2 md:mb-8 md:text-[100px] md:leading-[1.1]'>
                   Plan your <br />
                   <span className='text-primary-500'>perfect journey</span>
                 </TextDisplay>
@@ -76,9 +76,9 @@ export default async function LandingPage() {
           </section>
 
           <section className='py-16 md:py-24'>
-            <div className='mx-auto max-w-7xl px-4 md:px-6'>
-              <div className='scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-3 md:gap-8 md:px-0 md:pb-0'>
-                <div className='group w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all hover:border-blue-200 hover:bg-white md:w-auto'>
+            <div className='mx-auto max-w-7xl px-6'>
+              <div className='scrollbar-hide -mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-6 md:mx-0 md:grid md:grid-cols-3 md:gap-8 md:px-0 md:pb-0'>
+                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
                   <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl'>
                     <MessageSquare size={28} />
                   </div>
@@ -91,7 +91,7 @@ export default async function LandingPage() {
                   </TextBody>
                 </div>
 
-                <div className='group w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all hover:border-orange-200 hover:bg-white md:w-auto'>
+                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
                   <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-xl'>
                     <MapIcon size={28} />
                   </div>
@@ -104,7 +104,7 @@ export default async function LandingPage() {
                   </TextBody>
                 </div>
 
-                <div className='group w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all hover:border-emerald-200 hover:bg-white md:w-auto'>
+                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
                   <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-xl'>
                     <Compass size={28} />
                   </div>
@@ -122,7 +122,7 @@ export default async function LandingPage() {
         </main>
 
         <footer className='w-full bg-white/50 pt-16 pb-12 backdrop-blur-md'>
-          <div className='mx-auto max-w-7xl px-6 md:px-4'>
+          <div className='mx-auto max-w-7xl px-6'>
             <div className='mb-10 h-px w-full bg-slate-200/60' />
             <div className='flex flex-col gap-10'>
               {/* Top Layer */}

@@ -20,10 +20,10 @@ interface EditableJourney {
 
 export const budgetOptions = [
   { label: 'Any budget', value: null },
-  { label: 'Budget', value: 1 },
-  { label: 'Mid-range', value: 2 },
-  { label: 'Luxury', value: 3 },
-  { label: 'Ultra-Luxury', value: 4 }
+  { label: '₱ - Budget (Under ₱1,000/day)', value: 1 },
+  { label: '₱₱ - Mid-range (₱1,000 - ₱3,000/day)', value: 2 },
+  { label: '₱₱₱ - Luxury (₱3,000 - ₱5,000/day)', value: 3 },
+  { label: '₱₱₱₱ - Ultra-Luxury (₱5,000+/day)', value: 4 }
 ];
 
 export default function EditableJourneyPills({ journey }: { journey: EditableJourney | null }) {

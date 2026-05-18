@@ -5,8 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeftFromLine,
   ArrowRightFromLine,
-  Eye,
-  MapPinPlusInside
+  Binoculars
 } from 'lucide-react';
 import type { MapRef } from '@/components/ui/map';
 
@@ -14,6 +13,7 @@ import PoiMapCanvas from './PoiMapCanvas';
 import { usePois } from './use-pois';
 import PoiDetailsOverlay from './PoiDetailsOverlay';
 import PoiHoverCard from './PoiHoverCard';
+import MapLegend from './MapLegend';
 import { getTagLabel, getTagVisual } from './get-tag-icon';
 import type { POI } from './types';
 
@@ -26,6 +26,8 @@ type MapAreaProps = {
   routeCoordinates?: [number, number][];
   isRoutingActive?: boolean;
   routeOrderMap?: Record<string, number>;
+  routeDayMap?: Record<string, number>;
+  showLegend?: boolean;
 };
 
 export default function MapArea({
@@ -36,13 +38,18 @@ export default function MapArea({
   overridePois,
   routeCoordinates,
   isRoutingActive = false,
-  routeOrderMap
+  routeOrderMap,
+  routeDayMap,
+  showLegend = true
 }: MapAreaProps) {
   const { pois, isLoading: isPoisLoading, refreshPois } = usePois();
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isAddLocationMode, setIsAddLocationMode] = useState(false);
+  const [isLegendOpen, setIsLegendOpen] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
+  const legendContainerRef = useRef<HTMLDivElement | null>(null);
+  const legendButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Fallback for dynamically fetching a single shared POI not in local bounds
   const [isolatedPoi, setIsolatedPoi] = useState<POI | null>(null);
@@ -55,6 +62,9 @@ export default function MapArea({
 
   const iconTooltipClass =
     'pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-primary-dark-700 bg-primary-dark-900 px-2.5 py-1.5 text-xs font-medium text-primary-dark-50 opacity-0 shadow-sm transition-opacity group-hover/map-toggle:opacity-100';
+
+  const legendTooltipClass =
+    'pointer-events-none absolute top-1/2 right-full z-40 mr-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-primary-dark-700 bg-primary-dark-900 px-2.5 py-1.5 text-xs font-medium text-primary-dark-50 opacity-0 shadow-sm transition-opacity group-hover/map-legend:opacity-100';
 
   const combinedPois = useMemo(() => {
     // Routing mode: show journey POIs
@@ -138,6 +148,26 @@ export default function MapArea({
     };
   }, [isAddLocationMode, isContribute]);
 
+  useEffect(() => {
+    if (!isLegendOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (legendContainerRef.current?.contains(target)) return;
+      if (legendButtonRef.current?.contains(target)) return;
+      setIsLegendOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isLegendOpen]);
+
   // Handle URL sync and dynamic fetching of shared isolated POIs
   useEffect(() => {
     const poiFromUrl = searchParams.get('poi');
@@ -214,6 +244,27 @@ export default function MapArea({
           </button>
         </div>
       )}
+
+      {showLegend && !isAddLocationMode && (
+        <div className='absolute top-4 right-4 z-30 flex flex-col items-end gap-3'>
+          <button
+            type='button'
+            onClick={() => setIsLegendOpen(previous => !previous)}
+            aria-label='Toggle map legends'
+            aria-pressed={isLegendOpen}
+            ref={legendButtonRef}
+            className='group/map-legend border-border bg-background/95 text-text-main hover:bg-surface-light relative flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition'
+          >
+            <Binoculars className='h-4 w-4' />
+            <span className={legendTooltipClass}>Map Legends</span>
+          </button>
+          {isLegendOpen && (
+            <div ref={legendContainerRef}>
+              <MapLegend className='w-56' />
+            </div>
+          )}
+        </div>
+      )}
       <PoiMapCanvas
         pois={combinedPois}
         routeOrderMap={routeOrderMap}
@@ -222,6 +273,7 @@ export default function MapArea({
         onMarkerClick={poi => handleOpenPoi(poi.id)}
         routeCoordinates={routeCoordinates}
         isRoutingActive={isRoutingActive}
+        routeDayMap={routeDayMap}
         mapClassName={
           isContribute && isAddLocationMode
             ? '[&_.maplibregl-canvas]:cursor-crosshair'

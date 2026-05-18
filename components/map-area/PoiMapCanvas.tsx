@@ -16,6 +16,7 @@ import { cn } from '@/lib/cn';
 
 import { LEGAZPI_MAP_CENTER, MAP_LIGHT_STYLE_URL } from './constants';
 import { getTagIcon } from './get-tag-icon';
+import { getDayColor } from '@/lib/colors';
 import type { POI } from './types';
 
 type PoiMapCanvasProps = {
@@ -32,6 +33,7 @@ type PoiMapCanvasProps = {
   routeCoordinates?: [number, number][];
   isRoutingActive?: boolean;
   routeOrderMap?: Record<string, number>;
+  routeDayMap?: Record<string, number>;
   onMarkerClick?: (poi: POI) => void;
   renderPopup?: (poi: POI) => ReactNode;
   renderHoverPopup?: (poi: POI) => ReactNode;
@@ -44,6 +46,7 @@ export default function PoiMapCanvas({
   routeCoordinates,
   isRoutingActive = false,
   routeOrderMap,
+  routeDayMap,
   mapRef,
   mapClassName,
   controlsClassName,
@@ -88,7 +91,9 @@ export default function PoiMapCanvas({
         );
         const isSelected = selectedPoiId === poi.id;
         const routeOrder = routeOrderMap?.[poi.id];
+        const dayNumber = routeDayMap?.[poi.id];
         const isFirstRoute = routeOrder === 1;
+        const dynamicColor = dayNumber ? getDayColor(dayNumber) : color;
 
         return (
           <MapMarker
@@ -106,7 +111,7 @@ export default function PoiMapCanvas({
               <div
                 className={cn(
                   'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-lg transition-transform hover:scale-110',
-                  markerCircleClassName ?? color,
+                  markerCircleClassName ?? dynamicColor,
                   isFirstRoute &&
                     !isSelected &&
                     'ring-primary-500 ring-2 ring-offset-1',

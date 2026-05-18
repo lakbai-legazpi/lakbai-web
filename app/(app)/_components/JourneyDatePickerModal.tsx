@@ -196,16 +196,18 @@ export default function JourneyDatePickerModal({
                         const selected = isInSelectedRange(cell.iso);
                         const edge = cell.iso === startDate || cell.iso === endDate;
                         const isPastDate = cell.iso < todayISO;
+                        const isInvalidEndDate = Boolean(startDate && !endDate && cell.iso < startDate);
+                        const isDisabled = Boolean(isPastDate || isInvalidEndDate);
                         return (
                           <button
                             key={cell.iso}
                             onClick={() => handleDateSelect(cell.iso)}
-                            disabled={isPastDate}
+                            disabled={isDisabled}
                             className={cn(
                               'mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm transition-colors',
                               selected ? 'bg-primary-100 text-primary-900' : 'text-text-main hover:bg-primary-50 hover:text-primary-700',
                               edge && 'bg-primary-500 hover:bg-primary-500 text-white',
-                              isPastDate && 'text-text-muted/40 hover:text-text-muted/40 cursor-not-allowed hover:bg-transparent'
+                              isDisabled && 'text-text-muted/40 hover:text-text-muted/40 cursor-not-allowed hover:bg-transparent'
                             )}
                           >
                             {cell.day}
@@ -226,16 +228,18 @@ export default function JourneyDatePickerModal({
                         const selected = isInSelectedRange(cell.iso);
                         const edge = cell.iso === startDate || cell.iso === endDate;
                         const isPastDate = cell.iso < todayISO;
+                        const isInvalidEndDate = Boolean(startDate && !endDate && cell.iso < startDate);
+                        const isDisabled = Boolean(isPastDate || isInvalidEndDate);
                         return (
                           <button
                             key={cell.iso}
                             onClick={() => handleDateSelect(cell.iso)}
-                            disabled={isPastDate}
+                            disabled={isDisabled}
                             className={cn(
                               'mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm transition-colors',
                               selected ? 'bg-primary-100 text-primary-900' : 'text-text-main hover:bg-primary-50 hover:text-primary-700',
                               edge && 'bg-primary-500 hover:bg-primary-500 text-white',
-                              isPastDate && 'text-text-muted/40 hover:text-text-muted/40 cursor-not-allowed hover:bg-transparent'
+                              isDisabled && 'text-text-muted/40 hover:text-text-muted/40 cursor-not-allowed hover:bg-transparent'
                             )}
                           >
                             {cell.day}

@@ -16,6 +16,9 @@ import { cn } from '@/lib/utils';
 
 import JourneyDatePickerModal, { TimingData } from './JourneyDatePickerModal';
 import { formatDateSelection, formatFlexibleSelection, sortMonthsByTimeline } from '@/lib/date-utils';
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
+
+const DESTINATION_OPTIONS = ['Legazpi City', 'Daraga', 'Tabaco City', 'Ligao City', 'Camalig', 'Guinobatan', 'Polangui', 'Oas', 'Sorsogon City', 'Naga City', 'Iriga City', 'Bicol Region'];
 
 export default function NewJourneyModal({
   open,
@@ -84,10 +87,10 @@ export default function NewJourneyModal({
 
   const budgetOptions: Array<{ label: string; value: number | null }> = [
     { label: 'Any budget', value: null },
-    { label: '₱', value: 1 },
-    { label: '₱₱', value: 2 },
-    { label: '₱₱₱', value: 3 },
-    { label: '₱₱₱₱', value: 4 }
+    { label: '₱ - Budget (Under ₱1,000/day)', value: 1 },
+    { label: '₱₱ - Mid-range (₱1,000 - ₱3,000/day)', value: 2 },
+    { label: '₱₱₱ - Luxury (₱3,000 - ₱5,000/day)', value: 3 },
+    { label: '₱₱₱₱ - Ultra-Luxury (₱5,000+/day)', value: 4 }
   ];
 
   const budgetLabel =
@@ -129,11 +132,12 @@ export default function NewJourneyModal({
                 <TextBody className='text-foreground mb-2 text-sm font-bold'>
                   Destination
                 </TextBody>
-                <input
-                  type='text'
+                <AutocompleteInput
+                  id='journey-destination'
                   value={destination}
-                  onChange={e => setDestination(e.target.value)}
+                  onValueChange={setDestination}
                   placeholder="Where's your next adventure?"
+                  options={DESTINATION_OPTIONS}
                   className='bg-surface/90 focus:ring-primary-500 w-full rounded-full px-5 py-3 text-[15px] outline-none focus:ring-2 focus:ring-inset'
                 />
               </div>

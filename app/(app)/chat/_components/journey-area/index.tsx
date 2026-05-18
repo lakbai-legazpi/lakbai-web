@@ -16,7 +16,9 @@ import { DragDropContext, Droppable, DropResult } from '@hello-pangea/dnd';
 import { TextHeading, TextBody } from '@/components/text';
 import ItineraryItemCard from './ItineraryItemCard';
 import { useRouter } from 'next/navigation';
-import EditableJourneyPills, { budgetOptions } from '../../../journey/_components/editable-journey-pills';
+import EditableJourneyPills, {
+  budgetOptions
+} from '../../../journey/_components/editable-journey-pills';
 import Notification, { Toast } from '../../../_components/Notificaiton';
 import JourneyCalendar from '../../../journey/_components/journey-calendar';
 import { cn } from '@/lib/utils';
@@ -91,9 +93,17 @@ export default function JourneyArea({
     isOpen: boolean;
     message: string;
   }>({ isOpen: false, message: '' });
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'calendar'>('itinerary');
-  const [activeDayDropdown, setActiveDayDropdown] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'calendar'>(
+    'itinerary'
+  );
+  const [activeDayDropdown, setActiveDayDropdown] = useState<string | null>(
+    null
+  );
   const [basecampDropdownOpen, setBasecampDropdownOpen] = useState(false);
+  const [isBasecampCollapsed, setIsBasecampCollapsed] = useState(false);
+  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>(
+    {}
+  );
   const [renameModal, setRenameModal] = useState<{
     isOpen: boolean;
     dayId: string;
@@ -104,8 +114,6 @@ export default function JourneyArea({
     dayId: string;
   }>({ isOpen: false, dayId: '' });
 
-
-
   // We still need the useEffects to sync items and days
   useEffect(() => {
     if (journey?.itineraryItems) {
@@ -115,8 +123,6 @@ export default function JourneyArea({
       setDays(journey.days);
     }
   }, [journey?.itineraryItems, journey?.days]);
-
-
 
   // Group items by day
   const groupedItinerary = useMemo(() => {
@@ -159,7 +165,6 @@ export default function JourneyArea({
 
   const totalItems = items.length;
   const totalBasecampItems = groupedItinerary.basecamp.length;
-
 
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -394,6 +399,13 @@ export default function JourneyArea({
     }
   };
 
+  const toggleDayCollapse = (dayId: string) => {
+    setCollapsedDays(prev => ({
+      ...prev,
+      [dayId]: !prev[dayId]
+    }));
+  };
+
   return (
     <div className='bg-background absolute inset-0 z-10 flex flex-col'>
       {/* Header */}
@@ -467,15 +479,25 @@ export default function JourneyArea({
       {/* Tabs Row */}
       <div className='border-border flex items-center justify-between border-b px-6 pb-2'>
         <div className='flex items-center gap-4'>
-          <span 
+          <span
             onClick={() => setActiveTab('itinerary')}
-            className={cn('cursor-pointer pb-[9px] text-[15px] transition-colors', activeTab === 'itinerary' ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold' : 'text-text-muted hover:text-foreground')}
+            className={cn(
+              'cursor-pointer pb-[9px] text-[15px] transition-colors',
+              activeTab === 'itinerary'
+                ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold'
+                : 'text-text-muted hover:text-foreground'
+            )}
           >
             Itinerary
           </span>
-          <span 
+          <span
             onClick={() => setActiveTab('calendar')}
-            className={cn('cursor-pointer pb-[9px] text-[15px] transition-colors', activeTab === 'calendar' ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold' : 'text-text-muted hover:text-foreground')}
+            className={cn(
+              'cursor-pointer pb-[9px] text-[15px] transition-colors',
+              activeTab === 'calendar'
+                ? 'text-text-main border-text-main -mb-[10px] border-b-2 font-bold'
+                : 'text-text-muted hover:text-foreground'
+            )}
           >
             Calendar
           </span>
@@ -508,7 +530,9 @@ export default function JourneyArea({
             endDate={journey?.endDate ? new Date(journey.endDate) : null}
             isFlexible={journey?.isFlexibleDates || false}
             flexibleDays={journey?.flexibleDays}
-            flexibleMonths={journey?.flexibleMonths ? JSON.parse(journey.flexibleMonths) : []}
+            flexibleMonths={
+              journey?.flexibleMonths ? JSON.parse(journey.flexibleMonths) : []
+            }
             itineraryItems={items}
           />
         </div>
@@ -516,285 +540,305 @@ export default function JourneyArea({
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className='flex-1 overflow-y-auto px-6 py-6'>
             {/* Basecamp Section */}
-          <div className='group mb-8'>
-            <div className='mb-3 flex items-center justify-between'>
-              <div className='flex cursor-pointer items-center'>
-                <div className='flex w-7 items-center justify-start'>
-                  <ChevronDown
-                    size={20}
-                    strokeWidth={2}
-                    className='text-foreground'
-                  />
-                </div>
-                <TextBody className='text-foreground text-[15px] font-bold'>
-                  Basecamp
-                </TextBody>
-                <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
-                  {totalBasecampItems} item{totalBasecampItems !== 1 ? 's' : ''}
-                </TextBody>
-              </div>
-
-              <div className='relative'>
+            <div className='group mb-8'>
+              <div className='mb-3 flex items-center justify-between'>
                 <button
-                  onClick={() => setBasecampDropdownOpen(prev => !prev)}
-                  className='text-text-muted hover:bg-surface hover:text-foreground rounded-full p-1.5 transition-colors'
-                  aria-label='Basecamp actions'
+                  type='button'
+                  onClick={() => setIsBasecampCollapsed(prev => !prev)}
+                  className='flex items-center text-left'
                 >
-                  <MoreHorizontal size={18} />
+                  <div className='flex w-7 items-center justify-start'>
+                    <ChevronDown
+                      size={20}
+                      strokeWidth={2}
+                      className={cn(
+                        'text-foreground transition-transform',
+                        isBasecampCollapsed && '-rotate-90'
+                      )}
+                    />
+                  </div>
+                  <TextBody className='text-foreground text-[15px] font-bold'>
+                    Basecamp
+                  </TextBody>
+                  <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
+                    {totalBasecampItems} item
+                    {totalBasecampItems !== 1 ? 's' : ''}
+                  </TextBody>
                 </button>
 
-                {basecampDropdownOpen && (
-                  <>
-                    <div
-                      className='fixed inset-0 z-40'
-                      onClick={() => setBasecampDropdownOpen(false)}
-                    />
-                    <div className='border-border bg-background absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
-                      <button
-                        onClick={handleClearBasecamp}
-                        className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                      >
-                        Clear basecamp
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+                <div className='relative'>
+                  <button
+                    onClick={() => setBasecampDropdownOpen(prev => !prev)}
+                    className='text-text-muted hover:bg-surface hover:text-foreground rounded-full p-1.5 transition-colors'
+                    aria-label='Basecamp actions'
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
 
-            {/* Droppable Basecamp Area */}
-            <Droppable droppableId='basecamp'>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
-                >
-                  {groupedItinerary.basecamp.map((item, index) => (
-                    <ItineraryItemCard
-                      key={item.id}
-                      item={item}
-                      index={index}
-                      journey={journey || null}
-                      onMoveToDay={handleMoveToDay}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </div>
-
-          {/* Itinerary Section */}
-          <div className='mb-4'>
-            <div className='mb-4 flex items-center justify-between'>
-              <div className='flex items-center'>
-                <div className='flex w-7 items-center justify-start' />
-                <TextBody className='text-foreground text-[15px] font-bold'>
-                  Itinerary
-                </TextBody>
-                <TextBody className='text-text-muted ml-4 pt-[2px] text-xs font-medium'>
-                  {totalItems - totalBasecampItems} item
-                  {totalItems - totalBasecampItems !== 1 ? 's' : ''}
-                </TextBody>
-              </div>
-            </div>
-
-            {days.length === 0 ? (
-              <div className='text-text-muted pl-7 text-sm'>
-                Please set travel dates to plan your itinerary.
-              </div>
-            ) : (
-              days.map((day, index) => {
-                const dayNumber = day.dayNumber;
-                return (
-                  <div key={`day-${day.id}`} className='group relative mb-6'>
-                    <div className='mb-3 flex items-center justify-between'>
-                      <div className='flex cursor-pointer items-center'>
-                        <div className='flex w-7 items-center justify-start'>
-                          <ChevronDown
-                            size={20}
-                            strokeWidth={2}
-                            className='text-foreground'
-                          />
-                        </div>
-                        <TextBody className='text-foreground text-[15px] font-bold'>
-                          {day.title || `Day ${dayNumber}`}
-                        </TextBody>
-                        <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
-                          {
-                            (groupedItinerary.scheduledDays[dayNumber] || [])
-                              .length
-                          }{' '}
-                          items
-                        </TextBody>
-                      </div>
-
-                      {/* Day Action Menu */}
-                      <div className='relative'>
+                  {basecampDropdownOpen && (
+                    <>
+                      <div
+                        className='fixed inset-0 z-40'
+                        onClick={() => setBasecampDropdownOpen(false)}
+                      />
+                      <div className='border-border bg-background absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
                         <button
-                          onClick={() =>
-                            setActiveDayDropdown(
-                              activeDayDropdown === day.id ? null : day.id
-                            )
-                          }
-                          className='text-text-muted hover:text-foreground hover:bg-surface rounded-full p-1.5 transition-colors'
+                          onClick={handleClearBasecamp}
+                          className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
                         >
-                          <MoreHorizontal size={18} />
+                          Clear basecamp
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Droppable Basecamp Area */}
+              {!isBasecampCollapsed && (
+                <Droppable droppableId='basecamp'>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
+                    >
+                      {groupedItinerary.basecamp.map((item, index) => (
+                        <ItineraryItemCard
+                          key={item.id}
+                          item={item}
+                          index={index}
+                          journey={journey || null}
+                          onMoveToDay={handleMoveToDay}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              )}
+            </div>
+
+            {/* Itinerary Section */}
+            <div className='mb-4'>
+              <div className='mb-4 flex items-center justify-between'>
+                <div className='flex items-center'>
+                  <div className='flex w-7 items-center justify-start' />
+                  <TextBody className='text-foreground text-[15px] font-bold'>
+                    Itinerary
+                  </TextBody>
+                  <TextBody className='text-text-muted ml-4 pt-[2px] text-xs font-medium'>
+                    {totalItems - totalBasecampItems} item
+                    {totalItems - totalBasecampItems !== 1 ? 's' : ''}
+                  </TextBody>
+                </div>
+              </div>
+
+              {days.length === 0 ? (
+                <div className='text-text-muted pl-7 text-sm'>
+                  Please set travel dates to plan your itinerary.
+                </div>
+              ) : (
+                days.map((day, index) => {
+                  const dayNumber = day.dayNumber;
+                  const isDayCollapsed = collapsedDays[day.id] ?? false;
+                  return (
+                    <div key={`day-${day.id}`} className='group relative mb-6'>
+                      <div className='mb-3 flex items-center justify-between'>
+                        <button
+                          type='button'
+                          onClick={() => toggleDayCollapse(day.id)}
+                          className='flex items-center text-left'
+                        >
+                          <div className='flex w-7 items-center justify-start'>
+                            <ChevronDown
+                              size={20}
+                              strokeWidth={2}
+                              className={cn(
+                                'text-foreground transition-transform',
+                                isDayCollapsed && '-rotate-90'
+                              )}
+                            />
+                          </div>
+                          <TextBody className='text-foreground text-[15px] font-bold'>
+                            {day.title || `Day ${dayNumber}`}
+                          </TextBody>
+                          <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>
+                            {
+                              (groupedItinerary.scheduledDays[dayNumber] || [])
+                                .length
+                            }{' '}
+                            items
+                          </TextBody>
                         </button>
 
-                        {activeDayDropdown === day.id && (
-                          <>
-                            <div
-                              className='fixed inset-0 z-40'
-                              onClick={() => setActiveDayDropdown(null)}
-                            />
-                            <div className='bg-background border-border absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
-                              <button
-                                onClick={() => {
-                                  setRenameModal({
-                                    isOpen: true,
-                                    dayId: day.id,
-                                    initialName: day.title || ''
-                                  });
-                                  setActiveDayDropdown(null);
-                                }}
-                                className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                              >
-                                Rename Day
-                              </button>
-                              <button
-                                onClick={() => handleClearDay(dayNumber)}
-                                className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                              >
-                                Clear day
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  setActiveDayDropdown(null);
-                                  await fetch(
-                                    `/api/journeys/${journey?.id}/days`,
-                                    {
-                                      method: 'POST',
-                                      headers: {
-                                        'Content-Type': 'application/json'
-                                      },
-                                      body: JSON.stringify({
-                                        action: 'add-before',
-                                        dayNumber: day.dayNumber
-                                      })
-                                    }
-                                  );
-                                  router.refresh();
-                                  window.dispatchEvent(
-                                    new Event('journey-updated')
-                                  );
-                                }}
-                                className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                              >
-                                Add Day Before
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  setActiveDayDropdown(null);
-                                  await fetch(
-                                    `/api/journeys/${journey?.id}/days`,
-                                    {
-                                      method: 'POST',
-                                      headers: {
-                                        'Content-Type': 'application/json'
-                                      },
-                                      body: JSON.stringify({
-                                        action: 'add-after',
-                                        dayNumber: day.dayNumber
-                                      })
-                                    }
-                                  );
-                                  router.refresh();
-                                  window.dispatchEvent(
-                                    new Event('journey-updated')
-                                  );
-                                }}
-                                className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
-                              >
-                                Add Day After
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setActiveDayDropdown(null);
-                                  setDeleteModal({
-                                    isOpen: true,
-                                    dayId: day.id
-                                  });
-                                }}
-                                className='border-border mt-1 w-full border-t px-4 py-2 pt-1 text-left text-sm text-red-600 transition-colors hover:bg-red-50'
-                              >
-                                Remove Day
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                        {/* Day Action Menu */}
+                        <div className='relative'>
+                          <button
+                            onClick={() =>
+                              setActiveDayDropdown(
+                                activeDayDropdown === day.id ? null : day.id
+                              )
+                            }
+                            className='text-text-muted hover:text-foreground hover:bg-surface rounded-full p-1.5 transition-colors'
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
 
-                    {/* Droppable Day Area */}
-                    <Droppable droppableId={`day-${dayNumber}`}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
-                        >
-                          {(
-                            groupedItinerary.scheduledDays[dayNumber] || []
-                          ).map((item, itemIndex) => (
-                            <ItineraryItemCard
-                              key={item.id}
-                              item={item}
-                              index={itemIndex}
-                              journey={journey || null}
-                              onMoveToBasecamp={handleMoveToBasecamp}
-                              onDelete={handleDelete}
-                            />
-                          ))}
-                          {provided.placeholder}
-
-                          {(groupedItinerary.scheduledDays[dayNumber] || [])
-                            .length === 0 &&
-                            !snapshot.isDraggingOver && (
-                              <div className='text-text-muted/60 py-2 pl-2 text-xs italic'>
-                                Drag items here...
+                          {activeDayDropdown === day.id && (
+                            <>
+                              <div
+                                className='fixed inset-0 z-40'
+                                onClick={() => setActiveDayDropdown(null)}
+                              />
+                              <div className='bg-background border-border absolute top-full right-0 z-50 mt-1 w-48 overflow-hidden rounded-xl border py-1 shadow-lg'>
+                                <button
+                                  onClick={() => {
+                                    setRenameModal({
+                                      isOpen: true,
+                                      dayId: day.id,
+                                      initialName: day.title || ''
+                                    });
+                                    setActiveDayDropdown(null);
+                                  }}
+                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                >
+                                  Rename Day
+                                </button>
+                                <button
+                                  onClick={() => handleClearDay(dayNumber)}
+                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                >
+                                  Clear day
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    setActiveDayDropdown(null);
+                                    await fetch(
+                                      `/api/journeys/${journey?.id}/days`,
+                                      {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                          action: 'add-before',
+                                          dayNumber: day.dayNumber
+                                        })
+                                      }
+                                    );
+                                    router.refresh();
+                                    window.dispatchEvent(
+                                      new Event('journey-updated')
+                                    );
+                                  }}
+                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                >
+                                  Add Day Before
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    setActiveDayDropdown(null);
+                                    await fetch(
+                                      `/api/journeys/${journey?.id}/days`,
+                                      {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                          action: 'add-after',
+                                          dayNumber: day.dayNumber
+                                        })
+                                      }
+                                    );
+                                    router.refresh();
+                                    window.dispatchEvent(
+                                      new Event('journey-updated')
+                                    );
+                                  }}
+                                  className='text-text-main hover:bg-surface w-full px-4 py-2 text-left text-sm transition-colors'
+                                >
+                                  Add Day After
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setActiveDayDropdown(null);
+                                    setDeleteModal({
+                                      isOpen: true,
+                                      dayId: day.id
+                                    });
+                                  }}
+                                  className='border-border mt-1 w-full border-t px-4 py-2 pt-1 text-left text-sm text-red-600 transition-colors hover:bg-red-50'
+                                >
+                                  Remove Day
+                                </button>
                               </div>
-                            )}
+                            </>
+                          )}
                         </div>
-                      )}
-                    </Droppable>
-                  </div>
-                );
-              })
-            )}
+                      </div>
 
-            {days.length > 0 && (
-              <button
-                onClick={async () => {
-                  await fetch(`/api/journeys/${journey?.id}/days`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'add-end' })
-                  });
-                  router.refresh();
-                  window.dispatchEvent(new Event('journey-updated'));
-                }}
-                className='border-border hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 text-text-muted ml-7 flex w-[calc(100%-28px)] items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition-colors'
-              >
-                <PlusCircle size={16} /> Add Day
-              </button>
-            )}
+                      {/* Droppable Day Area */}
+                      {!isDayCollapsed && (
+                        <Droppable droppableId={`day-${dayNumber}`}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className={`ml-7 flex min-h-[50px] flex-col gap-3 rounded-2xl pb-4 transition-colors ${snapshot.isDraggingOver ? 'bg-surface/50 border-primary-300 border-2 border-dashed' : ''}`}
+                            >
+                              {(
+                                groupedItinerary.scheduledDays[dayNumber] || []
+                              ).map((item, itemIndex) => (
+                                <ItineraryItemCard
+                                  key={item.id}
+                                  item={item}
+                                  index={itemIndex}
+                                  journey={journey || null}
+                                  onMoveToBasecamp={handleMoveToBasecamp}
+                                  onDelete={handleDelete}
+                                />
+                              ))}
+                              {provided.placeholder}
+
+                              {(groupedItinerary.scheduledDays[dayNumber] || [])
+                                .length === 0 &&
+                                !snapshot.isDraggingOver && (
+                                  <div className='text-text-muted/60 py-2 pl-2 text-xs italic'>
+                                    Drag items here...
+                                  </div>
+                                )}
+                            </div>
+                          )}
+                        </Droppable>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {days.length > 0 && (
+                <button
+                  onClick={async () => {
+                    await fetch(`/api/journeys/${journey?.id}/days`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'add-end' })
+                    });
+                    router.refresh();
+                    window.dispatchEvent(new Event('journey-updated'));
+                  }}
+                  className='border-border hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 text-text-muted ml-7 flex w-[calc(100%-28px)] items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition-colors'
+                >
+                  <PlusCircle size={16} /> Add Day
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </DragDropContext>
-    )}
+        </DragDropContext>
+      )}
     </div>
   );
 }

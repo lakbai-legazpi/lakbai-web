@@ -265,6 +265,15 @@ export default function NavigatePage() {
     return map;
   }, [orderedItems]);
 
+  const routeDayMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    orderedItems.forEach(item => {
+      if (map[item.poi.id] || item.dayNumber === null) return;
+      map[item.poi.id] = item.dayNumber;
+    });
+    return map;
+  }, [orderedItems]);
+
   const journeyKey = useMemo(() => {
     const ids = journeyPois.map(p => p.id).join('-');
     return activeJourneyId ? `${activeJourneyId}-${ids}` : ids;
@@ -359,6 +368,8 @@ export default function NavigatePage() {
           routeCoordinates={routeCoordinates}
           isRoutingActive={true}
           routeOrderMap={routeOrderMap}
+          routeDayMap={routeDayMap}
+          showLegend={false}
         />
       </div>
     </div>

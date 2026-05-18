@@ -4,6 +4,8 @@ import { useMemo } from 'react';
 import { TextHeading, TextBody } from '@/components/text';
 import { MapPin, Clock } from 'lucide-react';
 import { addDays, format, differenceInDays } from 'date-fns';
+import { getDayColor } from '@/lib/colors';
+import Link from 'next/link';
 
 type JourneyCalendarProps = {
   startDate: Date | null;
@@ -86,7 +88,7 @@ export default function JourneyCalendar({
             )}
 
             <div className='mb-4 flex items-center gap-4'>
-              <div className='bg-primary-500 z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full'>
+              <div className={`z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${getDayColor(day.dayNumber)}`}>
                 <span className='text-[11px] font-bold text-white'>{day.dayNumber}</span>
               </div>
               <div>
@@ -107,12 +109,13 @@ export default function JourneyCalendar({
               ) : (
                 <div className='flex flex-col gap-3'>
                   {day.items.map((item, i) => (
-                    <div 
+                    <Link 
+                      href={item.poi?.id ? `/explore?poi=${item.poi.id}` : '#'}
                       key={`item-${item.id || i}`}
-                      className='border-border bg-surface flex flex-col gap-2 rounded-2xl border p-4 shadow-sm'
+                      className='border-border bg-surface hover:bg-surface-light group flex flex-col gap-2 rounded-2xl border p-4 shadow-sm transition-colors'
                     >
                       <div className='flex items-start justify-between gap-3'>
-                        <TextBody className='text-text-main font-semibold'>
+                        <TextBody className='text-text-main group-hover:text-primary-600 font-semibold transition-colors'>
                           {item.poi?.name || 'Unknown Location'}
                         </TextBody>
                         {item.startTime && (
@@ -130,7 +133,7 @@ export default function JourneyCalendar({
                           <span className='line-clamp-1'>{item.poi.location}</span>
                         </div>
                       )}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ThumbsUp, Bookmark, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import SelectJourneyModal from './SelectJourneyModal';
+import { Toast } from '@/app/(app)/_components/Notificaiton';
 
 interface PoiActionButtonsProps {
   poiId: string;
@@ -25,6 +26,14 @@ export function PoiActionButtons({
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     async function fetchStatus() {
@@ -58,10 +67,12 @@ export function PoiActionButtons({
       if (!res.ok) throw new Error('Vouch failed');
       const data = await res.json();
       setIsVouched(data.isVouched);
+      setToast({ message: data.isVouched ? 'Location vouched' : 'Vouch removed', type: 'success' });
     } catch (err) {
       // Revert optimistic update
       setIsVouched(wasVouched);
       setVouchCount(prev => (wasVouched ? prev + 1 : prev - 1));
+      setToast({ message: 'Failed to vouch', type: 'error' });
     }
   };
 
@@ -80,9 +91,11 @@ export function PoiActionButtons({
       if (!res.ok) throw new Error('Favorite failed');
       const data = await res.json();
       setIsFavorited(data.isFavorited);
+      setToast({ message: data.isFavorited ? 'Added to favorites' : 'Removed from favorites', type: 'success' });
     } catch (err) {
       // Revert optimistic update
       setIsFavorited(wasFavorited);
+      setToast({ message: 'Failed to favorite', type: 'error' });
     }
   };
 
@@ -93,6 +106,7 @@ export function PoiActionButtons({
           type='button'
           onClick={handleVouch}
           disabled={isLoading}
+          title={isVouched ? 'Remove vouch' : 'Vouch for this location'}
           className={cn(
             'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
             isVouched
@@ -118,6 +132,7 @@ export function PoiActionButtons({
           type='button'
           onClick={handleFavorite}
           disabled={isLoading}
+          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
           className={cn(
             'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
             isFavorited
@@ -139,6 +154,7 @@ export function PoiActionButtons({
             e.stopPropagation();
             setIsModalOpen(true);
           }}
+          title='Add this location to a journey'
           className={cn(
             'border-foreground/40 text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition',
             buttonClassName
@@ -156,6 +172,12 @@ export function PoiActionButtons({
           poiId={poiId}
         />
       )}
+
+      <Toast
+        isOpen={toast !== null}
+        message={toast?.message || ''}
+        type={toast?.type || 'success'}
+      />
     </>
   );
 }

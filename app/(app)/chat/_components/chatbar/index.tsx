@@ -173,7 +173,7 @@ export default function Chatbar({
         {/* Journey List */}
         <div className='mb-6'>
           <TextBody className='text-text-muted mb-2 px-4 text-[13px] font-medium'>
-            Journeys
+            My Journeys
           </TextBody>
           <div className='flex flex-col gap-1'>
             {journeys?.map(journey => (
@@ -189,50 +189,6 @@ export default function Chatbar({
                     `Journey to ${journey.destination || 'Unknown'}`}
                 </span>
 
-                <div className='relative flex items-center'>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setOpenDropdownId(
-                        openDropdownId === journey.id ? null : journey.id
-                      );
-                    }}
-                    className={`rounded-md p-1 transition-all ${openDropdownId === journey.id ? 'bg-slate-200 opacity-100' : 'opacity-0 group-hover:opacity-100 hover:bg-slate-200'}`}
-                  >
-                    <Ellipsis size={18} className='text-text-main' />
-                  </button>
-
-                  {openDropdownId === journey.id && (
-                    <div className='border-border absolute top-full right-0 z-50 mt-1 w-36 overflow-hidden rounded-lg border bg-white shadow-lg'>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleRename(
-                            'journey',
-                            journey.id,
-                            journey.title ||
-                              `Journey to ${journey.destination || 'Unknown'}`
-                          );
-                        }}
-                        className='text-text-main hover:bg-surface flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors'
-                      >
-                        <PencilIcon size={14} /> Rename
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleDelete('journey', journey.id);
-                        }}
-                        className='flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50'
-                      >
-                        <Trash2 size={14} /> Delete Journey
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             ))}
             {!journeys?.length && (
@@ -246,7 +202,7 @@ export default function Chatbar({
         {/* Chats List */}
         <div>
           <TextBody className='text-text-muted mb-2 px-4 text-[13px] font-medium'>
-            Chats
+            Chat History
           </TextBody>
           <div className='flex flex-col gap-1'>
             {chats?.map(chat => {

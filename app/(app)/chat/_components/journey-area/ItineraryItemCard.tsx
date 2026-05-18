@@ -97,7 +97,18 @@ export default function ItineraryItemCard({
             <MapPin size={16} />
           </div>
           <div className='flex flex-col flex-1 pr-6'>
-            <span className='text-sm font-bold line-clamp-2 leading-tight'>{item.poi?.name ?? 'Unknown POI'}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('poi', item.poiId);
+                router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+              }}
+              className='text-left text-sm font-bold line-clamp-2 leading-tight hover:text-primary-600 transition-colors'
+            >
+              {item.poi?.name ?? 'Unknown POI'}
+            </button>
             <span className='text-xs text-text-muted mt-1'>
               {item.startTime 
                 ? `${item.startTime}${item.endTime ? ` - ${item.endTime}` : ''}` 

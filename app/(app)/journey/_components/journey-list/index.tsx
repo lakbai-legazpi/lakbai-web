@@ -212,7 +212,7 @@ export default function JourneyList({
   }
 
   return (
-    <div className='flex h-full w-full flex-col bg-white px-8 py-10'>
+    <div className='flex h-full w-full flex-col overflow-y-auto bg-white px-8 py-10'>
       {/* Header */}
       <div className='mb-10 flex flex-wrap items-center justify-between gap-4'>
         <div className='flex items-center gap-4'>

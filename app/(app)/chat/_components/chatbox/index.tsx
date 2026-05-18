@@ -608,8 +608,12 @@ export default function Chatbox({
               )}
               {isAiTyping && (
                 <div className='mt-2 flex w-full justify-start'>
-                  <div className='bg-surface text-text-main border-border flex max-w-[80%] items-center gap-2 rounded-2xl border px-4 py-2'>
-                    <span className='animate-pulse'>...</span>
+                  <div className='bg-surface text-text-main border-border flex max-w-[80%] items-center gap-2 rounded-2xl border px-4 py-3'>
+                    <div className='flex items-center gap-1.5'>
+                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]' />
+                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]' />
+                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce' />
+                    </div>
                   </div>
                 </div>
               )}

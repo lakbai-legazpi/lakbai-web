@@ -158,8 +158,8 @@ export function ContributionSidebar({
         </TextHeading>
         <TextBody className='text-text-muted mt-1 text-xs leading-snug'>
           {mode === 'edit'
-            ? `Editing "${selectedPoi?.name ?? 'selected POI'}". Update any field and move the marker if needed.`
-            : 'Enable pin mode, click the map to place a marker, then complete all POI details.'}
+            ? `Editing "${selectedPoi?.name ?? 'selected location'}". Update any field and move the marker if needed.`
+            : 'Enable pin mode, click the map to place a marker, then complete all location details.'}
         </TextBody>
       </div>
 
@@ -201,16 +201,22 @@ export function ContributionSidebar({
       >
         <div className='flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-4'>
           <div className='flex flex-col gap-1.5'>
-            <label
-              className='text-text-main text-xs font-semibold'
-              htmlFor='contrib-name'
-            >
-              Location Name <span className='text-error-500'>*</span>
-            </label>
+            <div className='flex items-center justify-between'>
+              <label
+                className='text-text-main text-xs font-semibold'
+                htmlFor='contrib-name'
+              >
+                Location Name <span className='text-error-500'>*</span>
+              </label>
+              <span className='text-[10px] text-slate-400'>
+                {form.name.length}/100
+              </span>
+            </div>
             <input
               id='contrib-name'
               type='text'
               required
+              maxLength={100}
               value={form.name}
               onChange={event => onFormFieldChange('name', event.target.value)}
               className='border-border text-text-main placeholder:text-text-muted bg-background focus:border-primary-400 rounded-lg border px-3 py-2 text-sm transition outline-none'
@@ -218,15 +224,21 @@ export function ContributionSidebar({
           </div>
 
           <div className='flex flex-col gap-1.5'>
-            <label
-              className='text-text-main text-xs font-semibold'
-              htmlFor='contrib-desc'
-            >
-              Description
-            </label>
+            <div className='flex items-center justify-between'>
+              <label
+                className='text-text-main text-xs font-semibold'
+                htmlFor='contrib-desc'
+              >
+                Description
+              </label>
+              <span className='text-[10px] text-slate-400'>
+                {form.description.length}/500
+              </span>
+            </div>
             <textarea
               id='contrib-desc'
               rows={4}
+              maxLength={500}
               value={form.description}
               onChange={event =>
                 onFormFieldChange('description', event.target.value)
@@ -237,7 +249,7 @@ export function ContributionSidebar({
 
           <div className='border-border bg-surface-light space-y-3 rounded-lg border p-3'>
             <p className='text-text-main border-border border-b pb-1 text-xs font-semibold'>
-              Primary Tag & Cluster
+              Category
             </p>
             <div className='grid grid-cols-2 gap-3'>
               <div className='flex flex-col gap-1.5'>
@@ -324,71 +336,89 @@ export function ContributionSidebar({
             </div>
           </div>
 
-          <div className='space-y-2 rounded-lg border p-3'>
-            <div className='flex items-center justify-between'>
-              <p className='text-xs font-semibold'>Contact (optional)</p>
+          <div className='space-y-4 rounded-lg border p-3'>
+            <div className='flex flex-col gap-2'>
+              <div className='flex items-center justify-between'>
+                <p className='text-xs font-semibold'>Websites (optional)</p>
+                <button
+                  type='button'
+                  onClick={() => onAddContactField('websites')}
+                  className='text-primary-600 text-xs font-semibold'
+                >
+                  + Add
+                </button>
+              </div>
+              {form.contact.websites.map((website, index) => (
+                <div
+                  key={`website-${index}`}
+                  className='flex items-center gap-2'
+                >
+                  <input
+                    type='url'
+                    placeholder='https://example.com'
+                    value={website}
+                    onChange={event =>
+                      onContactFieldChange(
+                        'websites',
+                        index,
+                        event.target.value
+                      )
+                    }
+                    className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
+                  />
+                  <button
+                    type='button'
+                    onClick={() => onRemoveContactField('websites', index)}
+                    aria-label='Remove website'
+                    className='text-text-muted hover:text-error-500'
+                  >
+                    <Trash2 className='h-4 w-4' />
+                  </button>
+                </div>
+              ))}
             </div>
-            {form.contact.websites.map((website, index) => (
-              <div key={`website-${index}`} className='flex items-center gap-2'>
-                <input
-                  type='url'
-                  placeholder='https://example.com'
-                  value={website}
-                  onChange={event =>
-                    onContactFieldChange('websites', index, event.target.value)
-                  }
-                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
-                />
-                <button
-                  type='button'
-                  onClick={() => onRemoveContactField('websites', index)}
-                  aria-label='Remove website'
-                  className='text-text-muted hover:text-error-500'
-                >
-                  <Trash2 className='h-4 w-4' />
-                </button>
-              </div>
-            ))}
-            <button
-              type='button'
-              onClick={() => onAddContactField('websites')}
-              className='text-primary-600 text-xs font-semibold'
-            >
-              + Add Website
-            </button>
 
-            {form.contact.phoneNumbers.map((phone, index) => (
-              <div key={`phone-${index}`} className='flex items-center gap-2'>
-                <input
-                  type='text'
-                  placeholder='+63 900 000 0000'
-                  value={phone}
-                  onChange={event =>
-                    onContactFieldChange(
-                      'phoneNumbers',
-                      index,
-                      event.target.value
-                    )
-                  }
-                  className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
-                />
+            <div className='flex flex-col gap-2'>
+              <div className='flex items-center justify-between'>
+                <p className='text-xs font-semibold'>
+                  Phone Numbers (optional)
+                </p>
                 <button
                   type='button'
-                  onClick={() => onRemoveContactField('phoneNumbers', index)}
-                  aria-label='Remove phone number'
-                  className='text-text-muted hover:text-error-500'
+                  onClick={() => onAddContactField('phoneNumbers')}
+                  className='text-primary-600 text-xs font-semibold'
                 >
-                  <Trash2 className='h-4 w-4' />
+                  + Add
                 </button>
               </div>
-            ))}
-            <button
-              type='button'
-              onClick={() => onAddContactField('phoneNumbers')}
-              className='text-primary-600 text-xs font-semibold'
-            >
-              + Add Phone
-            </button>
+              {form.contact.phoneNumbers.map((phone, index) => (
+                <div key={`phone-${index}`} className='flex items-center gap-2'>
+                  <input
+                    type='tel'
+                    pattern='[\+\d\s\-\(\)]+'
+                    title='Please enter a valid phone number (e.g., +63 900 000 0000)'
+                    placeholder='+63 900 000 0000'
+                    value={phone}
+                    onChange={event =>
+                      onContactFieldChange(
+                        'phoneNumbers',
+                        index,
+                        event.target.value
+                      )
+                    }
+                    className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-xs transition outline-none'
+                  />
+                  <button
+                    type='button'
+                    onClick={() => onRemoveContactField('phoneNumbers', index)}
+                    aria-label='Remove phone number'
+                    className='text-text-muted hover:text-error-500'
+                  >
+                    <Trash2 className='h-4 w-4' />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className='border-border rounded-lg border'>
@@ -615,7 +645,7 @@ export function ContributionSidebar({
             {submitStatus === 'loading' && (
               <Loader2 className='h-4 w-4 animate-spin' />
             )}
-            {mode === 'edit' ? 'Submit Edit' : 'Submit New POI'}
+            {mode === 'edit' ? 'Submit Edit' : 'Submit New Location'}
           </button>
         </div>
       </form>

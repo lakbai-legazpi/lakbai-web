@@ -94,7 +94,7 @@ function LoginForm({
       const resolveData = await resolveRes.json();
 
       if (!resolveRes.ok) {
-        onNotify(resolveData.error ?? 'Invalid username or email.', 'error');
+        onNotify('Invalid username or password. Please check for typos and try again.', 'error');
         return;
       }
 
@@ -105,7 +105,7 @@ function LoginForm({
       });
 
       if (authError) {
-        onNotify(authError.message, 'error');
+        onNotify('Invalid username or password. Please check for typos and try again.', 'error');
         return;
       }
 
@@ -205,6 +205,26 @@ function SignUpForm({
         onNotify('Please enter a valid email address.', 'error');
         return;
       }
+      
+      setLoading(true);
+      try {
+        const emailCheckRes = await fetch('/api/auth/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() })
+        });
+        const emailCheckData = await emailCheckRes.json();
+        if (!emailCheckRes.ok || !emailCheckData.available) {
+          onNotify('An account with this email already exists.', 'error');
+          setLoading(false);
+          return;
+        }
+      } catch {
+        onNotify('Failed to validate email.', 'error');
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
       setStep('password');
       return;
     }
@@ -214,8 +234,8 @@ function SignUpForm({
         onNotify('Please fill in password and confirm password.', 'error');
         return;
       }
-      if (password.length < 6) {
-        onNotify('Password must be at least 6 characters.', 'error');
+      if (password.length < 8 || !/\d/.test(password)) {
+        onNotify('Password must be at least 8 characters and contain at least 1 number.', 'error');
         return;
       }
       if (password !== confirmPassword) {
@@ -391,8 +411,17 @@ function SignUpForm({
             label='Password'
             value={password}
             onChange={setPassword}
-            placeholder='At least 6 characters'
+            placeholder='At least 8 characters and 1 number'
           />
+          <div className="flex flex-col gap-1 px-1">
+            <div className="flex items-center gap-2">
+              <div className={`h-1.5 flex-1 rounded-full transition-colors ${password.length >= 8 ? 'bg-green-500' : 'bg-slate-200'}`} />
+              <div className={`h-1.5 flex-1 rounded-full transition-colors ${/\d/.test(password) ? 'bg-green-500' : 'bg-slate-200'}`} />
+            </div>
+            <p className="text-xs text-slate-500">
+              Requirements: At least 8 characters and 1 number
+            </p>
+          </div>
 
           <PasswordInput
             id='signup-confirm-password'
@@ -723,12 +752,28 @@ export function LegalActions() {
 
 export function HeroCTA() {
   const { openSignUp } = useContext(AuthContext);
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = async () => {
+    setLoading(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    setLoading(false);
+    if (user) {
+      router.push('/chat');
+    } else {
+      openSignUp();
+    }
+  };
+
   return (
     <button
-      onClick={openSignUp}
-      className='group bg-primary-500 text-background flex items-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90'
+      onClick={handleClick}
+      disabled={loading}
+      className='group bg-primary-500 text-background flex items-center justify-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed min-w-[240px]'
     >
-      Start your journey
+      {loading ? <Loader2 className="animate-spin text-white" /> : 'Start your journey'}
     </button>
   );
 }
