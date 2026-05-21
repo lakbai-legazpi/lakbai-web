@@ -177,19 +177,28 @@ export default function Chatbar({
           </TextBody>
           <div className='flex flex-col gap-1'>
             {journeys?.map(journey => (
-              <div
+              <Link
+                href={`/journey/${journey.id}`}
                 key={journey.id}
                 className='hover:bg-surface group relative flex cursor-pointer items-center gap-3 rounded-lg px-4 py-2 transition-colors'
               >
-                <div className='border-border h-8 w-8 shrink-0 overflow-hidden rounded-md border bg-slate-100'>
-                  {/* Dummy image representation - a placeholder div */}
+                <div className='border-border h-8 w-8 shrink-0 overflow-hidden rounded-md border bg-slate-100 relative'>
+                  {journey.coverImageUrl ? (
+                    <img
+                      src={journey.coverImageUrl}
+                      alt={journey.title || 'Journey'}
+                      className='h-full w-full object-cover'
+                    />
+                  ) : (
+                    <div className='absolute inset-0 bg-linear-to-br from-primary-400 via-secondary-300 to-primary-600' />
+                  )}
                 </div>
                 <span className='text-text-main flex-1 truncate text-[15px] font-medium'>
                   {journey.title ||
                     `Journey to ${journey.destination || 'Unknown'}`}
                 </span>
 
-              </div>
+              </Link>
             ))}
             {!journeys?.length && (
               <div className='text-text-muted px-4 py-2 text-sm'>

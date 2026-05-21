@@ -4,6 +4,7 @@ import { Sidebar } from './_components/Sidebar';
 import GlobalChatbarWrapper from './_components/GlobalChatbarWrapper';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { pickJourneyCoverImage } from '@/lib/journey-utils';
 
 export const metadata: Metadata = {
   title: 'Lakbai App',
@@ -30,10 +31,30 @@ export default async function AppLayout({
     orderBy: { updatedAt: 'desc' },
   });
 
-  const journeys = await prisma.journey.findMany({
+  const rawJourneys = await prisma.journey.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
+    include: {
+      itineraryItems: {
+        select: {
+          poi: {
+            select: {
+              galleries: {
+                select: {
+                  imageUrl: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   });
+
+  const journeys = rawJourneys.map(journey => ({
+    ...journey,
+    coverImageUrl: pickJourneyCoverImage(journey.itineraryItems)
+  }));
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
