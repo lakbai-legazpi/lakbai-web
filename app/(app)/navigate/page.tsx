@@ -103,6 +103,7 @@ export default function NavigatePage() {
   );
   const [isJourneysLoading, setIsJourneysLoading] = useState(true);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
+  const [hoveredPoiId, setHoveredPoiId] = useState<string | null>(null);
 
   const journeyParam = searchParams.get('journey');
 
@@ -141,14 +142,6 @@ export default function NavigatePage() {
 
     if (journeyParam && journeys.some(journey => journey.id === journeyParam)) {
       setActiveJourneyId(journeyParam);
-      return;
-    }
-
-    if (
-      !activeJourneyId ||
-      !journeys.some(journey => journey.id === activeJourneyId)
-    ) {
-      setActiveJourneyId(journeys[0]?.id ?? null);
     }
   }, [journeys, journeyParam, activeJourneyId]);
 
@@ -355,6 +348,8 @@ export default function NavigatePage() {
           routeOrderMap={routeOrderMap}
           isJourneysLoading={isJourneysLoading}
           isJourneyLoading={isJourneyLoading}
+          hoveredPoiId={hoveredPoiId}
+          onHoverPoi={setHoveredPoiId}
         />
       </div>
 
@@ -372,6 +367,8 @@ export default function NavigatePage() {
           showLegend={false}
           showExportMap={true}
           journeyTitle={activeJourney?.title}
+          hoveredPoiId={hoveredPoiId}
+          onHoverPoi={setHoveredPoiId}
         />
       </div>
     </div>

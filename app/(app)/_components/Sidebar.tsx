@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { TextSubheading } from '@/components/text';
-import NotificationsPanel from './NotificationsPanel';
+import NotificationsPanel, { type Contribution } from './NotificationsPanel';
 import {
   MessageCircle,
   Luggage,
@@ -42,7 +42,36 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const profileTriggerRef = useRef<HTMLButtonElement>(null);
   const profileMenuContentRef = useRef<HTMLDivElement>(null);
 
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [isContributionsLoading, setIsContributionsLoading] = useState(false);
+  const [contributionsError, setContributionsError] = useState<string | null>(null);
+
   const router = useRouter();
+
+  const fetchContributions = async () => {
+    setIsContributionsLoading(true);
+    setContributionsError(null);
+    try {
+      const res = await fetch('/api/contributions');
+      if (!res.ok) {
+        throw new Error('Failed to load notifications');
+      }
+      const data = await res.json();
+      setContributions(data.contributions ?? []);
+    } catch (err) {
+      setContributionsError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setIsContributionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContributions();
+  }, []);
+
+  const unreadCount = contributions.filter(
+    c => c.status !== 'PENDING' && !c.isDismissed && !c.isRead && !(c.status === 'APPROVED' && !c.poi)
+  ).length;
 
   const closeChatPopup = () => {
     window.dispatchEvent(new CustomEvent('close-chat-popup'));
@@ -108,7 +137,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   return (
     <aside
       className={cn(
-        'group border-border bg-surface relative flex h-full flex-col border transition-all duration-300 ease-in-out print:hidden',
+        'group border-border bg-surface z-50 relative flex h-full flex-col border transition-all duration-300 ease-in-out print:hidden',
         isCollapsed ? 'w-22' : 'w-55'
       )}
     >
@@ -368,7 +397,17 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               : 'w-full rounded-lg p-2'
           )}
         >
-          <Bell size={24} className='shrink-0' />
+          <div className="relative shrink-0">
+            <Bell size={24} />
+            {unreadCount > 0 && (
+              <span className={cn(
+                "absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white",
+                isCollapsed && "scale-90"
+              )}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </div>
           <div
             className={cn(
               'overflow-hidden transition-all duration-300',
@@ -394,8 +433,15 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
         )}
         <NotificationsPanel
           open={isNotificationsOpen}
-          onClose={() => setIsNotificationsOpen(false)}
-          className='absolute top-0 bottom-0 left-full z-40'
+          onClose={() => {
+            setIsNotificationsOpen(false);
+            fetchContributions();
+          }}
+          className='absolute top-0 bottom-0 left-full z-[100]'
+          contributions={contributions}
+          isLoading={isContributionsLoading}
+          error={contributionsError}
+          onContributionsChange={setContributions}
         />
         {/* Profile */}
         <div ref={profileMenuRef} className='relative'>

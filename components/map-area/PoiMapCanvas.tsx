@@ -34,6 +34,8 @@ type PoiMapCanvasProps = {
   isRoutingActive?: boolean;
   routeOrderMap?: Record<string, number>;
   routeDayMap?: Record<string, number>;
+  hoveredPoiId?: string | null;
+  onHoverPoi?: (poiId: string | null) => void;
   onMarkerClick?: (poi: POI) => void;
   renderPopup?: (poi: POI) => ReactNode;
   renderHoverPopup?: (poi: POI) => ReactNode;
@@ -54,6 +56,8 @@ export default function PoiMapCanvas({
   markerCircleClassName,
   showControls = true,
   selectedPoiId,
+  hoveredPoiId,
+  onHoverPoi,
   onMarkerClick,
   renderPopup,
   renderHoverPopup
@@ -76,8 +80,8 @@ export default function PoiMapCanvas({
       {isRoutingActive && routeCoordinates && (
         <MapRoute
           coordinates={routeCoordinates}
-          color='#6366f1'
-          width={5}
+          color='#0ea5e9'
+          width={6}
           opacity={0.9}
         />
       )}
@@ -109,15 +113,17 @@ export default function PoiMapCanvas({
               )}
             >
               <div
+                onMouseEnter={onHoverPoi ? () => onHoverPoi(poi.id) : undefined}
+                onMouseLeave={onHoverPoi ? () => onHoverPoi(null) : undefined}
                 className={cn(
-                  'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-lg transition-transform hover:scale-110',
+                  'relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white shadow-lg transition-all duration-300',
                   markerCircleClassName ?? dynamicColor,
-                  isFirstRoute &&
-                    !isSelected &&
-                    'ring-primary-500 ring-2 ring-offset-1',
-                  isSelected && 'ring-primary-500 ring-2 ring-offset-1'
+                  (isSelected || hoveredPoiId === poi.id) ? 'scale-125 ring-primary-500 ring-2 ring-offset-1 z-50' : 'hover:scale-110'
                 )}
               >
+                {isFirstRoute && (
+                  <div className="absolute inset-0 rounded-full animate-ping bg-primary-500 opacity-50"></div>
+                )}
                 {isRoutingActive ? (
                   <span className='text-xs font-bold text-white'>
                     {routeOrder ?? ''}

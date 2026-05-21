@@ -16,6 +16,7 @@ import {
   type ContributionOperatingHourForm,
   type SubmitStatus
 } from '@/components/contribute/ContributionSidebar';
+import PoiDetailsOverlay, { type POIWithRelations } from '@/components/map-area/PoiDetailsOverlay';
 
 const dayIndexes = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -159,6 +160,7 @@ export default function ContributePage() {
   const [showHours, setShowHours] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
 
   const mode = editingPoi ? 'edit' : 'add';
 
@@ -187,6 +189,7 @@ export default function ContributePage() {
     setIsPinModeEnabled(true);
     setSubmitStatus('idle');
     setErrorMessage('');
+    setCurrentStep(1); // Jump to Basics step since location is already set
   };
 
   const handleFormFieldChange = (
@@ -364,6 +367,7 @@ export default function ContributePage() {
     setSubmitStatus('idle');
     setErrorMessage('');
     setIsPinModeEnabled(false);
+    setCurrentStep(0);
   };
 
   const handleClearPickedLocation = () => {
@@ -470,6 +474,38 @@ export default function ContributePage() {
     new Set(pois.flatMap(poi => poi.tags.map(t => t.name).filter(Boolean)))
   ) as string[];
 
+  const previewPoi: POIWithRelations = useMemo(() => {
+    const lat = parseCoordinate(form.latitude) || 0;
+    const lng = parseCoordinate(form.longitude) || 0;
+    
+    return {
+      id: editingPoi?.id || 'preview-poi',
+      name: form.name || 'Your Location Name',
+      description: form.description,
+      latitude: lat,
+      longitude: lng,
+      phoneNumber: form.contact.phoneNumbers.find(Boolean) || null,
+      email: null,
+      address: {
+        street: form.address.street || null,
+        barangay: form.address.barangay || null,
+        city: form.address.cityMunicipality || '',
+        province: form.address.province || ''
+      },
+      operatingHours: form.operatingHours,
+      links: form.contact.websites.filter(Boolean).map(url => ({ label: 'Website', url, iconType: 'globe' })),
+      galleries: form.galleryUploads.map(upload => ({ id: upload.id, imageUrl: upload.dataUrl })),
+      reviews: editingPoi ? (editingPoi as any).reviews : [],
+      tags: [{ 
+        id: 'preview-tag', 
+        name: form.primaryTagName || 'Category', 
+        iconName: form.primaryTagIcon,
+        cluster: { name: form.primaryTagCluster || 'Cluster' } 
+      }],
+      priceLevel: (editingPoi as any)?.priceLevel
+    };
+  }, [form, editingPoi]);
+
   return (
     <div className='relative flex h-full w-full overflow-hidden'>
       <ContributionSidebar
@@ -484,6 +520,8 @@ export default function ContributePage() {
         isPinModeEnabled={isPinModeEnabled}
         availableClusters={availableClusters}
         availableTags={availableTags}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
         onReset={handleReset}
         onSubmit={handleSubmit}
         onTogglePinMode={() =>
@@ -525,6 +563,19 @@ export default function ContributePage() {
           isAddMode={isPinModeEnabled}
           hiddenPoiIds={hiddenPoiIds}
         />
+
+        {currentStep > 0 && (
+          <div className="absolute inset-y-0 right-0 left-0 md:left-1/2 z-40 bg-surface shadow-2xl animate-in slide-in-from-right duration-300">
+            <PoiDetailsOverlay 
+              poi={previewPoi} 
+              copied={false} 
+              onClose={() => {}} 
+              onCopyShareUrl={() => {}} 
+              panelMode={false} 
+              previewMode={true} 
+            />
+          </div>
+        )}
       </div>
     </div>
   );

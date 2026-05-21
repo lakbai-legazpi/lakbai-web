@@ -146,6 +146,7 @@ type PoiDetailsOverlayProps = {
   onReviewSubmitted?: () => void;
   portalContainer?: HTMLElement | null;
   panelMode?: boolean;
+  previewMode?: boolean;
 };
 
 export default function PoiDetailsOverlay({
@@ -155,7 +156,8 @@ export default function PoiDetailsOverlay({
   onCopyShareUrl,
   onReviewSubmitted,
   portalContainer,
-  panelMode = false
+  panelMode = false,
+  previewMode = false
 }: PoiDetailsOverlayProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -310,14 +312,16 @@ export default function PoiDetailsOverlay({
       >
         <div className='flex items-center justify-between gap-3'>
           <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              onClick={onClose}
-              className='text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-full transition'
-              aria-label='Close location details'
-            >
-              <X className='h-5 w-5' />
-            </button>
+            {!previewMode && (
+              <button
+                type='button'
+                onClick={onClose}
+                className='text-foreground hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-full transition'
+                aria-label='Close location details'
+              >
+                <X className='h-5 w-5' />
+              </button>
+            )}
             <button
               type='button'
               onClick={() => setIsDetailsExpanded(prev => !prev)}
@@ -337,20 +341,24 @@ export default function PoiDetailsOverlay({
           </div>
 
           <div className='flex items-center gap-2'>
-            <PoiActionButtons
-              poiId={poi.id}
-              initialVouchCount={poi.vouchCount ?? 0}
-              layout='row'
-            />
-            <button
-              type='button'
-              onClick={onCopyShareUrl}
-              className='border-foreground/40 text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border'
-              aria-label='Copy share link'
-              title={copied ? 'Copied!' : 'Copy share link'}
-            >
-              <Share className='h-4 w-4' />
-            </button>
+            {!previewMode && (
+              <>
+                <PoiActionButtons
+                  poiId={poi.id}
+                  initialVouchCount={poi.vouchCount ?? 0}
+                  layout='row'
+                />
+                <button
+                  type='button'
+                  onClick={onCopyShareUrl}
+                  className='border-foreground/40 text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border'
+                  aria-label='Copy share link'
+                  title={copied ? 'Copied!' : 'Copy share link'}
+                >
+                  <Share className='h-4 w-4' />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -681,18 +689,20 @@ export default function PoiDetailsOverlay({
 
         {activeTab === 'reviews' && (
           <div className='mt-4'>
-            <div className='mb-4 flex justify-end'>
-              <button
-                type='button'
-                onClick={() => {
-                  setIsReviewFormOpen(true);
-                  setReviewError(null);
-                }}
-                className='border-foreground/40 text-foreground inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-medium'
-              >
-                <PlusCircle className='h-4 w-4' /> Add a review
-              </button>
-            </div>
+            {!previewMode && (
+              <div className='mb-4 flex justify-end'>
+                <button
+                  type='button'
+                  onClick={() => {
+                    setIsReviewFormOpen(true);
+                    setReviewError(null);
+                  }}
+                  className='border-foreground/40 text-foreground inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-medium'
+                >
+                  <PlusCircle className='h-4 w-4' /> Add a review
+                </button>
+              </div>
+            )}
 
             {isReviewFormOpen && (
               <div className='border-border bg-surface mb-5 rounded-2xl border p-4'>

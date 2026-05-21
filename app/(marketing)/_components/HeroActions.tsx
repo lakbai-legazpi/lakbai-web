@@ -155,7 +155,7 @@ function LoginForm({
           <Loader2 size={18} className='animate-spin' />
         ) : (
           <>
-            Sign In <ArrowRight size={16} />
+            Sign In
           </>
         )}
       </button>
@@ -205,7 +205,7 @@ function SignUpForm({
         onNotify('Please enter a valid email address.', 'error');
         return;
       }
-      
+
       setLoading(true);
       try {
         const emailCheckRes = await fetch('/api/auth/check-email', {
@@ -464,7 +464,6 @@ function SignUpForm({
         ) : (
           <>
             {step === 'username' ? 'Create Account' : 'Continue'}{' '}
-            <ArrowRight size={16} />
           </>
         )}
       </button>
@@ -495,8 +494,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  openLogin: () => {},
-  openSignUp: () => {}
+  openLogin: () => { },
+  openSignUp: () => { }
 });
 
 // ---------------------------------------------------------------------------

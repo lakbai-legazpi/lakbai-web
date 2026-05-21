@@ -259,6 +259,8 @@ model Contribution {
   /// Optional rejection/approval notes from the admin
   adminNotes   String?
   reviewedAt   DateTime?
+  isDismissed  Boolean            @default(false)
+  isRead       Boolean            @default(false)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   poi          POI?               @relation(fields: [poiId], references: [id])

@@ -1,6 +1,10 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import type { POI } from '@/components/map-area/types';
+import { MapPin, Navigation, Clock, Image as ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { getDayColor } from '@/lib/colors';
 
 type JourneySummary = {
   id: string;
@@ -27,6 +31,8 @@ type NavAreaProps = {
   routeOrderMap: Record<string, number>;
   isJourneysLoading: boolean;
   isJourneyLoading: boolean;
+  hoveredPoiId?: string | null;
+  onHoverPoi?: (poiId: string | null) => void;
 };
 
 export default function NavArea({
@@ -36,30 +42,52 @@ export default function NavArea({
   journeyDays,
   routeOrderMap,
   isJourneysLoading,
-  isJourneyLoading
+  isJourneyLoading,
+  hoveredPoiId,
+  onHoverPoi
 }: NavAreaProps) {
   const activeJourney = journeys.find(
     journey => journey.id === activeJourneyId
   );
-  const resolvedJourney = activeJourney ?? journeys[0];
-  const selectedJourneyId = activeJourneyId ?? journeys[0]?.id ?? '';
+  const resolvedJourney = activeJourney;
+  const selectedJourneyId = activeJourneyId;
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to selected tab
+  useEffect(() => {
+    if (!scrollContainerRef.current || !selectedJourneyId) return;
+    const activeTab = scrollContainerRef.current.querySelector('[data-active="true"]');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [selectedJourneyId]);
 
   return (
-    <div className='flex h-full flex-col gap-6 overflow-y-auto p-4'>
-      <div className='border-border bg-background flex flex-col gap-3 rounded-2xl border p-4'>
-        <div className='flex items-center justify-between'>
-          <h2 className='text-lg font-semibold'>Navigation</h2>
-          <span className='text-muted-foreground text-xs'>Active journey</span>
+    <div className='flex h-full flex-col bg-background/50 backdrop-blur-md overflow-hidden'>
+      {/* Header & Journey Selector */}
+      <div className='border-border bg-surface/80 backdrop-blur-xl border-b p-5 pb-0 z-10 shadow-sm'>
+        <div className='flex items-center justify-between mb-4'>
+          <div className='flex items-center gap-2'>
+            <div className='bg-primary-100 text-primary-600 rounded-lg p-2'>
+              <Navigation className='w-5 h-5' />
+            </div>
+            <div>
+              <h2 className='text-lg font-bold text-text-main leading-tight'>Navigating</h2>
+              <span className='text-text-muted text-xs font-medium uppercase tracking-wider'>Your Journeys</span>
+            </div>
+          </div>
         </div>
 
         {isJourneysLoading ? (
-          <div className='text-muted-foreground text-sm'>
+          <div className='text-text-muted text-sm pb-5 flex items-center gap-2'>
+            <div className="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
             Loading journeys...
           </div>
         ) : journeys.length === 0 ? (
-          <div className='border-border bg-surface flex flex-col gap-3 rounded-xl border border-dashed p-4'>
+          <div className='border-border bg-surface flex flex-col gap-3 rounded-xl border border-dashed p-4 mb-5'>
             <p className='text-sm font-semibold'>No journeys yet</p>
-            <p className='text-muted-foreground text-xs'>
+            <p className='text-text-muted text-xs'>
               Create a journey to start navigating between points.
             </p>
             <a
@@ -70,108 +98,199 @@ export default function NavArea({
             </a>
           </div>
         ) : (
-          <div className='flex flex-col gap-2'>
-            <select
-              value={selectedJourneyId}
-              onChange={event =>
-                event.target.value && onSelectJourney(event.target.value)
-              }
-              className='border-border bg-background text-text-main focus-visible:ring-primary-500 w-full rounded-xl border px-3 py-2 text-sm font-medium shadow-sm focus-visible:ring-2 focus-visible:outline-none'
+          <div className='relative'>
+            <p className='text-text-muted text-xs font-semibold uppercase tracking-wider mb-2 pl-1'>Select Journey</p>
+            <div 
+              ref={scrollContainerRef}
+              className='flex gap-2 overflow-x-auto pb-4 scrollbar-invisible scroll-smooth snap-x'
             >
-              {journeys.map(journey => (
-                <option key={journey.id} value={journey.id}>
-                  {journey.title}
-                </option>
-              ))}
-            </select>
-            <div className='text-muted-foreground text-xs'>
-              Showing itinerary for {resolvedJourney?.title ?? 'your journey'}
+              {journeys.map(journey => {
+                const isActive = journey.id === selectedJourneyId;
+                return (
+                  <button
+                    key={journey.id}
+                    data-active={isActive}
+                    onClick={() => onSelectJourney(journey.id)}
+                    className={cn(
+                      'whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 snap-center border',
+                      isActive 
+                        ? 'bg-primary-50 text-primary-700 border-primary-200 shadow-sm ring-1 ring-primary-500/20' 
+                        : 'bg-surface hover:bg-surface-light text-text-muted border-border hover:border-text-muted/30'
+                    )}
+                  >
+                    {journey.title}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {journeys.length > 0 && activeJourneyId ? (
-        <div className='flex flex-col gap-4'>
-          <div className='flex items-center justify-between'>
-            <h3 className='text-lg font-semibold'>Itinerary</h3>
-            <span className='text-muted-foreground text-sm'>
-              {journeyDays.length} day{journeyDays.length === 1 ? '' : 's'}
-            </span>
-          </div>
-
-          {isJourneyLoading ? (
-            <div className='text-muted-foreground text-sm'>
-              Loading itinerary...
+      {/* Main Content Area */}
+      <div className='flex-1 overflow-y-auto px-5 py-6 scrollbar-invisible relative'>
+        {!activeJourneyId && journeys.length > 0 ? (
+          <div className='flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 mt-4'>
+            <div className='text-center mb-6'>
+              <div className='bg-primary-100 text-primary-600 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-sm'>
+                <Navigation className='w-8 h-8' />
+              </div>
+              <h3 className='text-2xl font-bold text-text-main'>Where to next?</h3>
+              <p className='text-text-muted mt-2'>Select a journey above or below to begin navigating.</p>
             </div>
-          ) : journeyDays.length === 0 ? (
-            <div className='text-muted-foreground border-border rounded-xl border border-dashed p-4 text-sm'>
-              No stops yet. Add POIs to your journey to see the route.
-            </div>
-          ) : (
-            journeyDays.map(dayBlock => (
-              <div key={dayBlock.id} className='flex flex-col gap-3'>
-                <div className='flex items-center gap-2 text-sm font-medium'>
-                  <span>{dayBlock.title || `Day ${dayBlock.dayNumber}`}</span>
-                  {dayBlock.date && (
-                    <span className='text-muted-foreground'>
-                      {dayBlock.date}
+            
+            <div className='grid gap-4'>
+              {journeys.map((journey) => (
+                <button
+                  key={journey.id}
+                  onClick={() => onSelectJourney(journey.id)}
+                  className='text-left border-border hover:border-primary-300 bg-surface/50 hover:bg-surface backdrop-blur-sm rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 group'
+                >
+                  <h4 className='text-lg font-bold text-text-main group-hover:text-primary-700 transition-colors'>{journey.title}</h4>
+                  <p className='text-text-muted text-sm mt-1 line-clamp-1'>
+                    {journey.destination || 'Multiple destinations'}
+                  </p>
+                  <div className='flex items-center gap-4 mt-4'>
+                    <span className='bg-primary-50 text-primary-700 text-xs font-semibold px-3 py-1 rounded-full'>
+                      Start Journey
                     </span>
-                  )}
-                </div>
-
-                {dayBlock.pois.length === 0 ? (
-                  <div className='text-muted-foreground border-border rounded-xl border border-dashed px-3 py-3 text-xs'>
-                    No stops scheduled for this day.
                   </div>
-                ) : (
-                  dayBlock.pois.map((poi, index) => {
-                    const routeOrder = routeOrderMap[poi.id];
-                    const isStart = routeOrder === 1;
-                    const displayOrder = routeOrder ?? index + 1;
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : journeys.length > 0 && activeJourneyId ? (
+          <div className='flex flex-col gap-6 relative'>
+            <div className='flex items-center justify-between sticky top-0 bg-background z-20 pt-1 pb-3 px-1 border-b border-border shadow-sm -mt-2 mb-2'>
+              <div>
+                <h3 className='text-lg font-bold text-text-main line-clamp-1'>{resolvedJourney?.title}</h3>
+                <span className='text-text-muted text-xs font-medium'>
+                  {journeyDays.length} Day{journeyDays.length === 1 ? '' : 's'} Total
+                </span>
+              </div>
+            </div>
 
-                    return (
-                      <div
-                        key={poi.id}
-                        className='flex items-center justify-between rounded-xl border p-3'
-                      >
-                        <div className='flex items-center gap-3'>
-                          <div
-                            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                              isStart
-                                ? 'bg-primary-600 text-white'
-                                : 'bg-surface-light text-text-main border-border border'
-                            }`}
-                          >
-                            {displayOrder}
-                          </div>
+            {isJourneyLoading ? (
+              <div className='text-text-muted text-sm flex items-center gap-2 justify-center py-10'>
+                <div className="w-5 h-5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                Plotting route...
+              </div>
+            ) : journeyDays.length === 0 ? (
+              <div className='text-text-muted border-border rounded-xl border border-dashed p-8 text-center text-sm'>
+                <MapPin className="w-8 h-8 text-border mx-auto mb-3" />
+                No stops scheduled yet. Add places to this journey to build a route.
+              </div>
+            ) : (
+              <div className='relative pl-4 mt-2'>
+                {/* Continuous Timeline Background Line */}
+                <div className='absolute left-8 top-8 bottom-8 w-0.5 bg-border rounded-full' />
 
-                          <div>
-                            <p className='text-sm font-medium'>{poi.name}</p>
-                            <p className='text-muted-foreground text-xs'>
-                              {typeof poi.address === 'string'
-                                ? poi.address
-                                : poi.address
-                                  ? 'Address available'
-                                  : 'No address'}
-                            </p>
-                          </div>
+                {journeyDays.map((dayBlock, dayIndex) => {
+                  const dayColorClass = getDayColor(dayBlock.dayNumber);
+                  
+                  return (
+                    <div key={dayBlock.id} className='mb-8 relative'>
+                      <div className='flex items-center gap-3 text-sm font-bold text-text-main mb-6 bg-surface/80 backdrop-blur-md w-fit pr-4 pl-1 py-1 rounded-full shadow-sm border border-border z-10 relative ml-0.5'>
+                        <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-white text-xs', dayColorClass)}>
+                          D{dayBlock.dayNumber}
                         </div>
-
-                        {isStart && (
-                          <span className='text-primary-600 text-[10px] font-semibold uppercase'>
-                            Start
+                        {dayBlock.title || `Day ${dayBlock.dayNumber}`}
+                        {dayBlock.date && (
+                          <span className='text-text-muted font-medium text-xs ml-1 bg-surface-light px-2 py-0.5 rounded-full border border-border/50'>
+                            {dayBlock.date}
                           </span>
                         )}
                       </div>
-                    );
-                  })
-                )}
+
+                      {dayBlock.pois.length === 0 ? (
+                        <div className='text-text-muted border-border rounded-xl border border-dashed px-4 py-4 text-xs ml-8 bg-surface/50'>
+                          No stops scheduled for this day.
+                        </div>
+                      ) : (
+                        <div className='flex flex-col gap-5 ml-8'>
+                          {dayBlock.pois.map((poi, index) => {
+                            const routeOrder = routeOrderMap[poi.id];
+                            const isStart = routeOrder === 1;
+                            const displayOrder = routeOrder ?? index + 1;
+                            const isHovered = hoveredPoiId === poi.id;
+                            const thumbnail = poi.galleries?.[0]?.imageUrl;
+
+                            return (
+                              <div
+                                key={poi.id}
+                                onMouseEnter={() => onHoverPoi?.(poi.id)}
+                                onMouseLeave={() => onHoverPoi?.(null)}
+                                className={cn(
+                                  'group relative flex items-stretch gap-4 rounded-2xl border p-3 transition-all duration-300 cursor-default bg-surface/60 backdrop-blur-sm',
+                                  isHovered 
+                                    ? 'border-primary-300 shadow-lg scale-[1.02] -translate-y-0.5 bg-surface ring-1 ring-primary-500/20' 
+                                    : 'border-border hover:border-primary-200 hover:shadow-md hover:bg-surface'
+                                )}
+                              >
+                                {/* Timeline Node */}
+                                <div className='absolute -left-[27px] top-1/2 -translate-y-1/2 z-10'>
+                                  <div className={cn(
+                                    'flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold border-2 border-white shadow-md transition-transform duration-300',
+                                    isStart ? 'bg-primary-600 text-white w-7 h-7 -left-[2px] ring-2 ring-primary-500/30' : cn('text-white', dayColorClass),
+                                    isHovered ? 'scale-125' : ''
+                                  )}>
+                                    {displayOrder}
+                                  </div>
+                                </div>
+
+                                {/* Thumbnail */}
+                                <div className='w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-surface-light border border-border/50 flex items-center justify-center'>
+                                  {thumbnail ? (
+                                    <img src={thumbnail} alt={poi.name} className='w-full h-full object-cover transition-transform duration-700 group-hover:scale-110' />
+                                  ) : (
+                                    <ImageIcon className='w-6 h-6 text-text-muted/40' />
+                                  )}
+                                </div>
+
+                                {/* Content */}
+                                <div className='flex flex-col justify-center py-1 flex-1 min-w-0'>
+                                  <div className='flex items-start justify-between gap-2'>
+                                    <p className={cn(
+                                      'text-sm font-bold line-clamp-1 transition-colors duration-300',
+                                      isHovered ? 'text-primary-700' : 'text-text-main'
+                                    )}>
+                                      {poi.name}
+                                    </p>
+                                    {isStart && (
+                                      <span className='bg-primary-100 text-primary-700 shrink-0 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full'>
+                                        Start
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <p className='text-text-muted text-xs line-clamp-2 mt-1 pr-2 leading-relaxed'>
+                                    {typeof poi.address === 'string'
+                                      ? poi.address
+                                      : poi.address
+                                        ? `${poi.address.street || ''} ${poi.address.cityMunicipality || ''}`
+                                        : 'Address details available'}
+                                  </p>
+
+                                  {/* Optional info badges (e.g. Price, Rating, Time) could go here */}
+                                  <div className='mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
+                                    <span className='text-[10px] font-semibold text-primary-600 flex items-center gap-1'>
+                                      <MapPin className="w-3 h-3" /> View on Map
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
-      ) : null}
+            )}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

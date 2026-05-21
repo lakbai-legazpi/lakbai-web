@@ -79,7 +79,12 @@ export default async function PublicProfilePage({ params, searchParams }: Profil
           journeys: true,
           favorites: true,
           reviews: true,
-          contributions: true,
+          contributions: {
+            where: {
+              status: 'APPROVED',
+              poiId: { not: null }
+            }
+          },
         },
       },
     },
@@ -331,56 +336,56 @@ export default async function PublicProfilePage({ params, searchParams }: Profil
 
           {activeTabName === 'contributions' && (
             <div className='w-full'>
-              {profile.contributions && profile.contributions.length > 0 ? (
-                <div className='flex flex-col gap-4'>
-                  {profile.contributions.map((contribution: any) => (
-                    <Link
-                      key={contribution.id}
-                      href={contribution.poi ? `/explore?poi=${contribution.poi.id}` : '#'}
-                      className={`border-border bg-surface-light group block rounded-2xl border p-5 transition hover:shadow-md ${!contribution.poi ? 'pointer-events-none' : ''}`}
-                    >
-                      <div className='flex items-start justify-between gap-4'>
-                        <div>
-                          <div className='mb-2 flex items-center gap-2'>
-                            {contribution.status === 'APPROVED' ? (
-                              <span className='bg-emerald-100 text-emerald-700 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold'>
-                                <CheckCircle className='h-3.5 w-3.5' /> Approved
-                              </span>
-                            ) : contribution.status === 'REJECTED' ? (
-                              <span className='bg-rose-100 text-rose-700 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold'>
-                                <XCircle className='h-3.5 w-3.5' /> Rejected
-                              </span>
-                            ) : (
-                              <span className='bg-amber-100 text-amber-700 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold'>
-                                <Clock className='h-3.5 w-3.5' /> Pending
-                              </span>
-                            )}
-                            <span className='text-text-muted text-xs font-medium'>
-                              {formatDistanceToNow(new Date(contribution.createdAt), { addSuffix: true })}
-                            </span>
+              {(() => {
+                const validContributions = profile.contributions?.filter(
+                  (c: any) => c.status === 'APPROVED' && c.poi
+                ) || [];
+
+                if (validContributions.length > 0) {
+                  return (
+                    <div className='flex flex-col gap-4'>
+                      {validContributions.map((contribution: any) => (
+                        <Link
+                          key={contribution.id}
+                          href={`/explore?poi=${contribution.poi.id}`}
+                          className='border-border bg-surface-light group block rounded-2xl border p-5 transition hover:shadow-md'
+                        >
+                          <div className='flex items-start justify-between gap-4'>
+                            <div>
+                              <div className='mb-2 flex items-center gap-2'>
+                                <span className='bg-emerald-100 text-emerald-700 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold'>
+                                  <CheckCircle className='h-3.5 w-3.5' /> Approved
+                                </span>
+                                <span className='text-text-muted text-xs font-medium'>
+                                  {formatDistanceToNow(new Date(contribution.createdAt), { addSuffix: true })}
+                                </span>
+                              </div>
+                              
+                              <h3 className='text-text-main group-hover:text-primary-600 text-lg font-semibold transition'>
+                                {contribution.poi.name}
+                              </h3>
+                              <p className='text-text-muted mt-1 text-sm'>
+                                {contribution.type === 'CREATE' ? 'Proposed a new location to the map.' : 'Suggested edits to an existing location.'}
+                              </p>
+                            </div>
+                            <MapPinHouse className='text-text-muted h-6 w-6 shrink-0' />
                           </div>
-                          
-                          <h3 className='text-text-main group-hover:text-primary-600 text-lg font-semibold transition'>
-                            {contribution.poi?.name || 'New Location Suggestion'}
-                          </h3>
-                          <p className='text-text-muted mt-1 text-sm'>
-                            {contribution.type === 'CREATE' ? 'Proposed a new location to the map.' : 'Suggested edits to an existing location.'}
-                          </p>
-                        </div>
-                        <MapPinHouse className='text-text-muted h-6 w-6 shrink-0' />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className='flex flex-col items-center justify-center py-14 text-center'>
-                  <div className='from-emerald-100 to-emerald-200 mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br shadow-[0_20px_40px_rgba(52,211,153,0.22)]'>
-                    <MapPinHouse className='text-emerald-600 h-8 w-8' />
+                        </Link>
+                      ))}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className='flex flex-col items-center justify-center py-14 text-center'>
+                    <div className='from-emerald-100 to-emerald-200 mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br shadow-[0_20px_40px_rgba(52,211,153,0.22)]'>
+                      <MapPinHouse className='text-emerald-600 h-8 w-8' />
+                    </div>
+                    <h2 className='text-text-main text-2xl font-semibold sm:text-3xl'>No contributions yet</h2>
+                    <p className='text-text-muted mt-2 text-base sm:text-xl'>This user hasn't successfully contributed any map data.</p>
                   </div>
-                  <h2 className='text-text-main text-2xl font-semibold sm:text-3xl'>No contributions yet</h2>
-                  <p className='text-text-muted mt-2 text-base sm:text-xl'>This user hasn't contributed any map data.</p>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
         </section>

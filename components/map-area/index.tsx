@@ -32,6 +32,8 @@ type MapAreaProps = {
   showLegend?: boolean;
   showExportMap?: boolean;
   journeyTitle?: string;
+  hoveredPoiId?: string | null;
+  onHoverPoi?: (poiId: string | null) => void;
 };
 
 export default function MapArea({
@@ -46,7 +48,9 @@ export default function MapArea({
   routeDayMap,
   showLegend = true,
   showExportMap = false,
-  journeyTitle
+  journeyTitle,
+  hoveredPoiId,
+  onHoverPoi
 }: MapAreaProps) {
   const { pois, isLoading: isPoisLoading, refreshPois } = usePois();
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
@@ -387,6 +391,8 @@ export default function MapArea({
         mapRef={mapRef}
         selectedPoiId={selectedPoiId}
         onMarkerClick={poi => handleOpenPoi(poi.id)}
+        hoveredPoiId={hoveredPoiId}
+        onHoverPoi={onHoverPoi}
         routeCoordinates={routeCoordinates}
         isRoutingActive={isRoutingActive}
         routeDayMap={routeDayMap}
