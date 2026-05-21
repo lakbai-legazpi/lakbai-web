@@ -13,6 +13,7 @@ type JourneyCalendarProps = {
   isFlexible: boolean;
   flexibleDays?: number | null;
   flexibleMonths?: string[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   itineraryItems?: any[];
 };
 
@@ -69,8 +70,8 @@ export default function JourneyCalendar({
   }, [totalDays, isFlexible, startDate, itineraryItems]);
 
   return (
-    <div className='border-border bg-background flex h-full max-h-[800px] w-full flex-col overflow-hidden rounded-[32px] border shadow-xs'>
-      <div className='border-border flex flex-col justify-center border-b px-8 py-6'>
+    <div className='border-border bg-background flex h-full max-h-[800px] print:max-h-none w-full flex-col overflow-hidden print:overflow-visible rounded-[32px] border shadow-xs print:border-none print:shadow-none print:bg-transparent'>
+      <div className='border-border flex flex-col justify-center border-b px-8 py-6 print:px-0'>
         <TextHeading className='text-xl font-bold'>Itinerary Timeline</TextHeading>
         {isFlexible && flexibleMonths && flexibleMonths.length > 0 && (
           <TextBody className='text-text-muted mt-1 text-sm'>
@@ -79,7 +80,7 @@ export default function JourneyCalendar({
         )}
       </div>
 
-      <div className='flex-1 overflow-y-auto px-8 py-6'>
+      <div className='flex-1 overflow-y-auto px-8 py-6 print:overflow-visible print:px-0'>
         {days.map((day, index) => (
           <div key={`day-${day.dayNumber}`} className='relative mb-8'>
             {/* Timeline Vertical Line connecting days */}
@@ -112,17 +113,16 @@ export default function JourneyCalendar({
                     <Link 
                       href={item.poi?.id ? `/explore?poi=${item.poi.id}` : '#'}
                       key={`item-${item.id || i}`}
-                      className='border-border bg-surface hover:bg-surface-light group flex flex-col gap-2 rounded-2xl border p-4 shadow-sm transition-colors'
+                      className='border-border bg-surface hover:bg-surface-light group flex flex-col gap-2 rounded-2xl border p-4 shadow-sm transition-colors print:bg-transparent print:border-none print:shadow-none print:p-0 print:gap-1'
                     >
-                      <div className='flex items-start justify-between gap-3'>
+                      <div className='flex items-start justify-between gap-3 print:flex-row-reverse print:justify-end print:gap-3'>
                         <TextBody className='text-text-main group-hover:text-primary-600 font-semibold transition-colors'>
                           {item.poi?.name || 'Unknown Location'}
                         </TextBody>
                         {item.startTime && (
-                          <div className='bg-primary-50 text-primary-700 flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold'>
-                            <Clock size={12} />
-                            {item.startTime}
-                            {item.endTime && ` - ${item.endTime}`}
+                          <div className='bg-primary-50 text-primary-700 flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold print:bg-transparent print:text-text-main print:p-0 print:font-bold'>
+                            <Clock size={12} className='print:hidden' />
+                            <span>{item.startTime}{item.endTime && ` - ${item.endTime}`}</span>
                           </div>
                         )}
                       </div>

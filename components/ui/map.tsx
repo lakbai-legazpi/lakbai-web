@@ -221,12 +221,14 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
       container: containerRef.current,
       style: initialStyle,
       renderWorldCopies: false,
+      preserveDrawingBuffer: true,
       attributionControl: {
         compact: true,
       },
       ...props,
       ...viewport,
-    });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
 
     const styleDataHandler = () => {
       clearStyleTimeout();

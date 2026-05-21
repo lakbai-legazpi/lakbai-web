@@ -6,6 +6,7 @@ import { TextHeading, TextBody } from '@/components/text';
 import { ChevronLeft, MessageCircle } from 'lucide-react';
 import JourneyCalendar from '../_components/journey-calendar';
 import EditableJourneyPills from '../_components/editable-journey-pills';
+import ExportJourneyButton from '../_components/ExportJourneyButton';
 
 export default async function JourneyDetailsPage({
   params
@@ -30,7 +31,14 @@ export default async function JourneyDetailsPage({
       },
       itineraryItems: {
         include: {
-          poi: true
+          poi: {
+            include: {
+              address: true,
+              operatingHours: true,
+              links: true,
+              tags: true
+            }
+          }
         }
       }
     }
@@ -42,8 +50,8 @@ export default async function JourneyDetailsPage({
 
 
   return (
-    <div className='bg-surface flex h-full w-full flex-col overflow-y-auto px-8 py-10'>
-      <div className='mb-6'>
+    <div className='bg-surface flex h-full w-full flex-col overflow-y-auto px-8 py-10 print:h-auto print:overflow-visible print:px-0 print:py-0'>
+      <div className='mb-6 print:hidden'>
         <Link
           href='/journey'
           className='text-text-muted hover:text-text-main inline-flex items-center gap-2 text-sm font-medium transition-colors'
@@ -53,17 +61,21 @@ export default async function JourneyDetailsPage({
         </Link>
       </div>
 
-      <TextHeading className='mb-6 text-[40px] leading-tight font-bold text-black'>
-        {journey.title}
-      </TextHeading>
+      <div className='mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+        <TextHeading className='text-[40px] leading-tight font-bold text-black'>
+          {journey.title}
+        </TextHeading>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <ExportJourneyButton journey={journey as any} />
+      </div>
 
-      <div className='mb-12'>
+      <div className='mb-12 print:hidden'>
         <EditableJourneyPills journey={journey} />
       </div>
 
-      <div className='flex flex-col gap-10 lg:flex-row'>
+      <div className='flex flex-col gap-10 lg:flex-row print:flex-row print:w-full'>
         {/* Left Column */}
-        <div className='flex-1 max-w-2xl'>
+        <div className='flex-1 max-w-2xl print:hidden'>
           <div className='mb-4 flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               <TextHeading className='text-[24px] font-bold text-black'>
@@ -111,7 +123,7 @@ export default async function JourneyDetailsPage({
         </div>
 
         {/* Right Column */}
-        <div className='w-full lg:w-[400px] xl:w-[450px] shrink-0'>
+        <div className='w-full lg:w-[400px] xl:w-[450px] shrink-0 print:w-full print:max-w-none'>
           <JourneyCalendar 
             startDate={journey.startDate} 
             endDate={journey.endDate} 

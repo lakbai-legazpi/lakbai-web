@@ -336,12 +336,12 @@ export default function NavigatePage() {
   return (
     <div
       ref={contentContainerRef}
-      className='relative flex h-full w-full overflow-hidden'
+      className='relative flex h-full w-full overflow-hidden print:overflow-visible print:h-auto'
     >
       {/* Nav Area (40%) */}
       <div
         className={cn(
-          'bg-surface border-border h-full transition-all duration-300 ease-in-out',
+          'bg-surface border-border h-full transition-all duration-300 ease-in-out print:hidden',
           isMapExpanded
             ? 'pointer-events-none w-0 overflow-hidden border-r-0 opacity-0'
             : 'w-[40%] border-r opacity-100'
@@ -359,7 +359,7 @@ export default function NavigatePage() {
       </div>
 
       {/* Map Area (60%) */}
-      <div className='bg-surface-light h-full w-[60%] flex-1'>
+      <div className='bg-surface-light h-full w-[60%] flex-1 print:w-full print:h-[100vh] print:absolute print:inset-0 print:z-50'>
         <MapArea
           isExpanded={isMapExpanded}
           onToggleExpand={() => setIsMapExpanded(prev => !prev)}
@@ -370,6 +370,8 @@ export default function NavigatePage() {
           routeOrderMap={routeOrderMap}
           routeDayMap={routeDayMap}
           showLegend={false}
+          showExportMap={true}
+          journeyTitle={activeJourney?.title}
         />
       </div>
     </div>

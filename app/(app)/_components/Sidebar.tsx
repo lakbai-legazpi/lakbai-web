@@ -108,7 +108,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   return (
     <aside
       className={cn(
-        'group border-border bg-surface relative flex h-full flex-col border transition-all duration-300 ease-in-out',
+        'group border-border bg-surface relative flex h-full flex-col border transition-all duration-300 ease-in-out print:hidden',
         isCollapsed ? 'w-22' : 'w-55'
       )}
     >

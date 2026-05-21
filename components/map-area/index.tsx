@@ -5,7 +5,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeftFromLine,
   ArrowRightFromLine,
-  Binoculars
+  Binoculars,
+  Download,
+  Printer
 } from 'lucide-react';
 import type { MapRef } from '@/components/ui/map';
 
@@ -28,6 +30,8 @@ type MapAreaProps = {
   routeOrderMap?: Record<string, number>;
   routeDayMap?: Record<string, number>;
   showLegend?: boolean;
+  showExportMap?: boolean;
+  journeyTitle?: string;
 };
 
 export default function MapArea({
@@ -40,19 +44,83 @@ export default function MapArea({
   isRoutingActive = false,
   routeOrderMap,
   routeDayMap,
-  showLegend = true
+  showLegend = true,
+  showExportMap = false,
+  journeyTitle
 }: MapAreaProps) {
   const { pois, isLoading: isPoisLoading, refreshPois } = usePois();
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isAddLocationMode, setIsAddLocationMode] = useState(false);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
   const legendContainerRef = useRef<HTMLDivElement | null>(null);
   const legendButtonRef = useRef<HTMLButtonElement | null>(null);
+  const exportContainerRef = useRef<HTMLDivElement | null>(null);
+  const exportButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Fallback for dynamically fetching a single shared POI not in local bounds
   const [isolatedPoi, setIsolatedPoi] = useState<POI | null>(null);
+
+  const downloadMapPng = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const canvas = map.getCanvas();
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    const filename = journeyTitle
+      ? `${journeyTitle.toLowerCase().replace(/\s+/g, "_")}_map.png`
+      : "lakbai_route_map.png";
+    link.download = filename;
+    link.href = dataUrl;
+    link.click();
+    setIsExportDropdownOpen(false);
+  };
+
+  const printMap = () => {
+    const map = mapRef.current;
+    if (map) {
+      map.resize();
+    }
+    setIsExportDropdownOpen(false);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      const map = mapRef.current;
+      if (map) {
+        map.resize();
+      }
+    };
+    window.addEventListener('beforeprint', handleBeforePrint);
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isExportDropdownOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (exportContainerRef.current?.contains(target)) return;
+      if (exportButtonRef.current?.contains(target)) return;
+      setIsExportDropdownOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isExportDropdownOpen]);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -245,22 +313,70 @@ export default function MapArea({
         </div>
       )}
 
-      {showLegend && !isAddLocationMode && (
-        <div className='absolute top-4 right-4 z-30 flex flex-col items-end gap-3'>
-          <button
-            type='button'
-            onClick={() => setIsLegendOpen(previous => !previous)}
-            aria-label='Toggle map legends'
-            aria-pressed={isLegendOpen}
-            ref={legendButtonRef}
-            className='group/map-legend border-border bg-background/95 text-text-main hover:bg-surface-light relative flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition'
-          >
-            <Binoculars className='h-4 w-4' />
-            <span className={legendTooltipClass}>Map Legends</span>
-          </button>
-          {isLegendOpen && (
-            <div ref={legendContainerRef}>
-              <MapLegend className='w-56' />
+      {((showLegend && !isAddLocationMode) || showExportMap) && (
+        <div className='absolute top-4 right-4 z-30 flex flex-col items-end gap-3 print:hidden'>
+          {showLegend && !isAddLocationMode && (
+            <div className="relative">
+              <button
+                type='button'
+                onClick={() => setIsLegendOpen(previous => !previous)}
+                aria-label='Toggle map legends'
+                aria-pressed={isLegendOpen}
+                ref={legendButtonRef}
+                className='group/map-legend border-border bg-background/95 text-text-main hover:bg-surface-light relative flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition cursor-pointer'
+              >
+                <Binoculars className='h-4 w-4' />
+                <span className={legendTooltipClass}>Map Legends</span>
+              </button>
+              {isLegendOpen && (
+                <div ref={legendContainerRef} className="absolute right-0 top-11 z-50">
+                  <MapLegend className='w-56' />
+                </div>
+              )}
+            </div>
+          )}
+
+          {showExportMap && (
+            <div className="relative" ref={exportContainerRef}>
+              <button
+                type="button"
+                onClick={() => setIsExportDropdownOpen(prev => !prev)}
+                aria-label="Export map options"
+                aria-pressed={isExportDropdownOpen}
+                ref={exportButtonRef}
+                className="group/map-export border-border bg-background/95 text-text-main hover:bg-surface-light relative flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition cursor-pointer"
+              >
+                <Download className="h-4 w-4" />
+                <span className={legendTooltipClass.replace('map-legend', 'map-export')}>Export Map</span>
+              </button>
+
+              {isExportDropdownOpen && (
+                <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-border bg-background p-3 shadow-lg flex flex-col gap-2">
+                  <p className="text-xs font-semibold text-text-main pb-1 border-b">Export Options</p>
+                  
+                  <button
+                    onClick={printMap}
+                    className="flex items-center gap-2 rounded-lg p-2 text-left text-xs font-medium hover:bg-surface-light transition text-text-main cursor-pointer"
+                  >
+                    <Printer className="h-4 w-4 text-primary-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Print Map / Save PDF</span>
+                      <span className="text-[10px] text-text-muted">Includes route line & POI markers</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={downloadMapPng}
+                    className="flex items-center gap-2 rounded-lg p-2 text-left text-xs font-medium hover:bg-surface-light transition text-text-main cursor-pointer"
+                  >
+                    <Download className="h-4 w-4 text-primary-500 shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Download PNG Image</span>
+                      <span className="text-[10px] text-text-muted">Map canvas and route line only</span>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -268,7 +384,7 @@ export default function MapArea({
       <PoiMapCanvas
         pois={combinedPois}
         routeOrderMap={routeOrderMap}
-        mapRef={isContribute ? mapRef : undefined}
+        mapRef={mapRef}
         selectedPoiId={selectedPoiId}
         onMarkerClick={poi => handleOpenPoi(poi.id)}
         routeCoordinates={routeCoordinates}
