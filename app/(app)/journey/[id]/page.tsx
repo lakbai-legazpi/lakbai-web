@@ -75,7 +75,7 @@ export default async function JourneyDetailsPage({
 
       <div className='flex flex-col gap-10 lg:flex-row print:flex-row print:w-full'>
         {/* Left Column */}
-        <div className='flex-1 max-w-2xl print:hidden'>
+        <div className='w-full lg:w-[320px] xl:w-[400px] shrink-0 print:hidden'>
           <div className='mb-4 flex items-center justify-between'>
             <div className='flex items-center gap-3'>
               <TextHeading className='text-[24px] font-bold text-black'>
@@ -103,8 +103,8 @@ export default async function JourneyDetailsPage({
                     <div className='bg-primary-50 text-primary-600 rounded-full p-3'>
                       <MessageCircle size={20} />
                     </div>
-                    <div>
-                      <TextBody className='text-text-main text-[16px] font-semibold'>
+                    <div className='min-w-0 flex-1 pr-2'>
+                      <TextBody className='text-text-main text-[16px] font-semibold truncate'>
                         {chat.title}
                       </TextBody>
                       <TextBody className='text-text-muted mt-0.5 text-[13px]'>
@@ -114,7 +114,7 @@ export default async function JourneyDetailsPage({
                   </div>
                   <ChevronLeft
                     size={20}
-                    className='text-text-muted rotate-180 transition-transform group-hover:translate-x-1 group-hover:text-black'
+                    className='text-text-muted rotate-180 shrink-0 transition-transform group-hover:translate-x-1 group-hover:text-black'
                   />
                 </Link>
               ))
@@ -123,7 +123,7 @@ export default async function JourneyDetailsPage({
         </div>
 
         {/* Right Column */}
-        <div className='w-full lg:w-[400px] xl:w-[450px] shrink-0 print:w-full print:max-w-none'>
+        <div className='flex-1 min-w-0 print:w-full print:max-w-none'>
           <JourneyCalendar 
             startDate={journey.startDate} 
             endDate={journey.endDate} 
