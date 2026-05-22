@@ -463,10 +463,6 @@ export default function Chatbox({
               </button>
             )}
           </div>
-
-          <button className='border-text-muted bg-background text-text-main hover:bg-surface flex h-9 w-9 items-center justify-center rounded-full border shadow-sm'>
-            <Share size={18} strokeWidth={2} className='-mt-0.5' />
-          </button>
         </div>
       )}
 
@@ -610,9 +606,9 @@ export default function Chatbox({
                 <div className='mt-2 flex w-full justify-start'>
                   <div className='bg-surface text-text-main border-border flex max-w-[80%] items-center gap-2 rounded-2xl border px-4 py-3'>
                     <div className='flex items-center gap-1.5'>
-                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]' />
-                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]' />
-                      <div className='w-1.5 h-1.5 bg-primary-500 rounded-full animate-bounce' />
+                      <div className='bg-primary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.3s]' />
+                      <div className='bg-primary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.15s]' />
+                      <div className='bg-primary-500 h-1.5 w-1.5 animate-bounce rounded-full' />
                     </div>
                   </div>
                 </div>
