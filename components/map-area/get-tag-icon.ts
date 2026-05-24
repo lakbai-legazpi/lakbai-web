@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { POITag } from './types';
+import { findTagSeedByName } from '@/lib/poi-tag-taxonomy';
 
 import { Chapel } from '@/components/icons/Chapel';
 import { Mosque } from '@/components/icons/Mosque';
@@ -114,12 +115,14 @@ export function getTagVisual(tag?: POITag | null): TagVisual {
     };
   }
 
-  const iconNameStr = tag.iconName || tag.cluster?.iconName;
+  const seed = findTagSeedByName(tag.name);
+  const clusterName = seed?.clusterId || null;
+  const iconNameStr = tag.iconName || seed?.iconName;
 
   return {
     icon: resolveTagIcon(iconNameStr),
-    color: getClusterColor(tag.cluster?.name),
-    clusterLabel: toClusterLabel(tag.cluster?.name),
+    color: getClusterColor(clusterName),
+    clusterLabel: toClusterLabel(clusterName),
   };
 }
 

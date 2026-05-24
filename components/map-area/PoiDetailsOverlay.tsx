@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'next/navigation';
 import {
   X,
   ArrowLeftFromLine,
@@ -159,8 +160,9 @@ export default function PoiDetailsOverlay({
   panelMode = false,
   previewMode = false
 }: PoiDetailsOverlayProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(searchParams?.get('gallery') === 'true');
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [localReviews, setLocalReviews] = useState(poi.reviews ?? []);
   const [isReviewFormOpen, setIsReviewFormOpen] = useState(false);
@@ -171,14 +173,14 @@ export default function PoiDetailsOverlay({
 
   useEffect(() => {
     setActiveTab('description');
-    setIsGalleryOpen(false);
+    setIsGalleryOpen(searchParams?.get('gallery') === 'true');
     setIsDetailsExpanded(false);
     setLocalReviews(poi.reviews ?? []);
     setIsReviewFormOpen(false);
     setReviewRating(0);
     setReviewContent('');
     setReviewError(null);
-  }, [poi.id]);
+  }, [poi.id, searchParams]);
 
   const galleryImages = useMemo(
     () =>

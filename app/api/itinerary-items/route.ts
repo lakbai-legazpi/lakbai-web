@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         orderIndex: (highestIndexInBasecamp?.orderIndex ?? -1) + 1,
       },
       include: {
-        poi: { include: { tags: { include: { cluster: true } } } },
+        poi: { include: { tags: true } },
       },
     });
 

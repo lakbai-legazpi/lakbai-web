@@ -93,11 +93,7 @@ export default function JourneyDatePickerModal({
       return;
     }
 
-    if (iso < startDate) {
-      setEndDate(startDate);
-      setStartDate(iso);
-      return;
-    }
+    if (iso < startDate) return; // Safety check: invalid end dates are disabled
 
     setEndDate(iso);
   };
@@ -131,11 +127,13 @@ export default function JourneyDatePickerModal({
               <CircleX size={20} />
             </button>
           </div>
-          <p className='text-text-muted mt-2 text-center text-sm'>
+          <p className='text-text-muted mt-2 text-center text-sm font-medium'>
             {timingModalMode === 'dates'
               ? startDate && endDate
                 ? dateSummary
-                : 'Select dates'
+                : !startDate
+                  ? 'Step 1: Select start date'
+                  : 'Step 2: Select end date'
               : flexibleSummary || `${flexibleDays} days`}
           </p>
         </div>

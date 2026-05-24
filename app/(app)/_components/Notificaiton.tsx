@@ -171,7 +171,7 @@ export function Toast({
   if (!isOpen) return null;
 
   return (
-    <div className='animate-in fade-in slide-in-from-top-4 fixed top-8 left-1/2 z-9999 -translate-x-1/2 duration-300'>
+    <div className='animate-in fade-in slide-in-from-top-4 fixed top-8 left-1/2 z-[9999] -translate-x-1/2 duration-300'>
       <div
         className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-medium shadow-lg ${
           type === 'success'

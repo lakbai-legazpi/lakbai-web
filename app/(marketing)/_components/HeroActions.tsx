@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { TextBody } from '@/components/text';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Toast } from '@/app/(app)/_components/Notificaiton';
+import { cn } from '@/lib/utils';
 
 type AuthView = 'login' | 'signup';
 type ToastType = 'success' | 'error';
@@ -413,14 +414,44 @@ function SignUpForm({
             onChange={setPassword}
             placeholder='At least 8 characters and 1 number'
           />
-          <div className="flex flex-col gap-1 px-1">
-            <div className="flex items-center gap-2">
-              <div className={`h-1.5 flex-1 rounded-full transition-colors ${password.length >= 8 ? 'bg-green-500' : 'bg-slate-200'}`} />
-              <div className={`h-1.5 flex-1 rounded-full transition-colors ${/\d/.test(password) ? 'bg-green-500' : 'bg-slate-200'}`} />
+          <div className="flex flex-col gap-2 px-1 mt-2">
+            <div className="flex items-center gap-1.5">
+              <div className={`h-1.5 flex-1 rounded-full transition-colors ${password.length === 0 ? 'bg-slate-200' : password.length < 8 ? 'bg-red-400' : 'bg-green-500'}`} />
+              <div className={`h-1.5 flex-1 rounded-full transition-colors ${password.length === 0 ? 'bg-slate-200' : (password.length >= 8 && /\d/.test(password)) ? (/[A-Z]/.test(password) || /[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'bg-green-500' : 'bg-yellow-400') : 'bg-slate-200'}`} />
+              <div className={`h-1.5 flex-1 rounded-full transition-colors ${password.length === 0 ? 'bg-slate-200' : (password.length >= 8 && /\d/.test(password) && /[A-Z]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)) ? 'bg-green-500' : 'bg-slate-200'}`} />
             </div>
-            <p className="text-xs text-slate-500">
-              Requirements: At least 8 characters and 1 number
-            </p>
+            
+            <div className="flex justify-between items-center text-[11px] font-medium uppercase tracking-wider">
+              <span className="text-slate-500">Strength</span>
+              <span className={cn(
+                password.length === 0 ? "text-slate-400" :
+                password.length < 8 ? "text-red-500" :
+                (password.length >= 8 && /\d/.test(password) && /[A-Z]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)) ? "text-green-600" :
+                (password.length >= 8 && /\d/.test(password)) ? "text-yellow-600" :
+                "text-red-500"
+              )}>
+                {password.length === 0 ? "None" :
+                 password.length < 8 ? "Weak" :
+                 (password.length >= 8 && /\d/.test(password) && /[A-Z]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)) ? "Strong" :
+                 (password.length >= 8 && /\d/.test(password)) ? "Fair" :
+                 "Weak"}
+              </span>
+            </div>
+
+            <ul className="text-xs text-slate-500 space-y-1 mt-1">
+              <li className="flex items-center gap-1.5">
+                <span className={password.length >= 8 ? "text-green-500" : "text-slate-300"}>✓</span> At least 8 characters
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className={/\d/.test(password) ? "text-green-500" : "text-slate-300"}>✓</span> Contains a number
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className={/[A-Z]/.test(password) ? "text-green-500" : "text-slate-300"}>✓</span> Contains an uppercase letter
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? "text-green-500" : "text-slate-300"}>✓</span> Contains a special character
+              </li>
+            </ul>
           </div>
 
           <PasswordInput

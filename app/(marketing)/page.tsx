@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
-import { Map as MapIcon, MessageSquare, Compass } from 'lucide-react';
+import { Map as MapIcon, MessageSquare, Compass, ChevronDown } from 'lucide-react';
 import {
   TextDisplay,
   TextHeading,
@@ -32,8 +32,14 @@ export default async function LandingPage() {
     // AuthProvider wraps the whole page so NavAuthButtons and HeroCTA
     // share a single modal state (only one pair of modals rendered).
     <AuthProvider>
-      <div className='relative min-h-screen w-full overflow-hidden bg-white font-sans text-slate-900 selection:bg-blue-100'>
-        <nav className='bg-surface border-border fixed top-0 z-50 w-full border-b'>
+      <div 
+        className='relative min-h-screen w-full overflow-hidden bg-slate-50 font-sans text-slate-900 selection:bg-blue-100'
+        style={{
+          backgroundImage: 'radial-gradient(rgba(0, 0, 0, 0.05) 1.5px, transparent 1.5px)',
+          backgroundSize: '32px 32px'
+        }}
+      >
+        <nav className='bg-surface/70 backdrop-blur-xl border-border/50 fixed top-0 z-50 w-full border-b transition-all'>
           <div className='mx-auto flex max-w-7xl items-center justify-between px-6 py-4'>
             <div className='flex items-center gap-2'>
               <div className='relative h-9 w-9'>
@@ -54,33 +60,40 @@ export default async function LandingPage() {
         </nav>
 
         <main>
-          <section className='relative flex min-h-[75vh] flex-col justify-center px-6 pt-32 pb-16'>
-            <div className='mx-auto w-full max-w-7xl'>
-              <div className='max-w-5xl text-left'>
-                <TextDisplay className='mb-6 tracking-tighter text-slate-900 py-2 md:mb-8 md:text-[100px] md:leading-[1.1]'>
+          <section className='relative flex min-h-screen flex-col items-center justify-center pt-24 pb-16 text-center'>
+            {/* Ambient Background Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-300/30 rounded-full blur-[120px] -z-10 pointer-events-none" />
+            
+            <div className='mx-auto w-full max-w-7xl px-6'>
+              <div className='max-w-4xl mx-auto'>
+                <TextDisplay className='mb-6 tracking-tighter text-slate-900 py-2 md:mb-8 text-6xl md:text-[96px] md:leading-[1.1]'>
                   Plan your <br />
-                  <span className='text-primary-500'>perfect journey</span>
+                  <span className='bg-linear-to-r from-primary-500 to-blue-500 bg-clip-text text-transparent'>perfect journey</span>
                 </TextDisplay>
 
-                <TextSubheading className='text-text-muted mb-12 max-w-2xl leading-relaxed md:text-[28px]'>
+                <TextSubheading className='text-slate-600 mb-12 mx-auto max-w-2xl leading-relaxed md:text-[24px]'>
                   Smart itineraries for the modern{' '}
                   <span className='text-primary-500 font-semibold'>local</span>{' '}
                   explorer
                 </TextSubheading>
 
-                <div className='flex items-center justify-start'>
+                <div className='flex items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-150 fill-mode-both'>
                   <HeroCTA />
                 </div>
               </div>
             </div>
+
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-slate-400">
+              <ChevronDown size={32} />
+            </div>
           </section>
 
-          <section className='py-16 md:py-24'>
+          <section className='py-24 relative bg-white/40 backdrop-blur-xl border-t border-white/50 shadow-inner'>
             <div className='mx-auto max-w-7xl px-6'>
-              <div className='scrollbar-hide -mx-6 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-6 md:mx-0 md:grid md:grid-cols-3 md:gap-8 md:px-0 md:pb-0'>
-                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
-                  <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-xl'>
-                    <MessageSquare size={28} />
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
+                <div className='group rounded-[2.5rem] border border-white bg-white/60 p-10 shadow-xl shadow-slate-200/20 backdrop-blur-md transition-all hover:shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-2'>
+                  <div className='mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-110 group-hover:-rotate-3'>
+                    <MessageSquare size={32} />
                   </div>
                   <TextHeading className='mb-4 text-slate-900'>
                     AI Concierge
@@ -91,9 +104,9 @@ export default async function LandingPage() {
                   </TextBody>
                 </div>
 
-                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
-                  <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-xl'>
-                    <MapIcon size={28} />
+                <div className='group rounded-[2.5rem] border border-white bg-white/60 p-10 shadow-xl shadow-slate-200/20 backdrop-blur-md transition-all hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-2'>
+                  <div className='mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-orange-400 to-red-500 text-white shadow-lg shadow-orange-500/30 transition-transform group-hover:scale-110 group-hover:-rotate-3'>
+                    <MapIcon size={32} />
                   </div>
                   <TextHeading className='mb-4 text-slate-900'>
                     Interactive Map
@@ -104,9 +117,9 @@ export default async function LandingPage() {
                   </TextBody>
                 </div>
 
-                <div className='w-[88vw] shrink-0 snap-center rounded-[2.5rem] border border-slate-100 bg-white/60 p-10 backdrop-blur-sm transition-all md:w-auto'>
-                  <div className='mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-xl'>
-                    <Compass size={28} />
+                <div className='group rounded-[2.5rem] border border-white bg-white/60 p-10 shadow-xl shadow-slate-200/20 backdrop-blur-md transition-all hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-2'>
+                  <div className='mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-400 to-teal-500 text-white shadow-lg shadow-emerald-500/30 transition-transform group-hover:scale-110 group-hover:-rotate-3'>
+                    <Compass size={32} />
                   </div>
                   <TextHeading className='mb-4 text-slate-900'>
                     Seamless Itinerary

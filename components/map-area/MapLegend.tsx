@@ -7,6 +7,7 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import Link from 'next/link';
 
 type MapLegendProps = {
   className?: string;
@@ -30,7 +31,7 @@ export default function MapLegend({ className }: MapLegendProps) {
       )}
     >
       <h4 className='text-text-main mb-3 text-sm font-semibold'>Map Legend</h4>
-      <div className='flex flex-col gap-2.5'>
+      <div className='flex flex-col gap-2.5 mb-4'>
         {legendItems.map(item => (
           <div key={item.label} className='flex items-center gap-3'>
             <div
@@ -46,6 +47,14 @@ export default function MapLegend({ className }: MapLegendProps) {
             </span>
           </div>
         ))}
+      </div>
+      <div className='border-t border-border/50 pt-3'>
+        <p className='text-[10px] text-text-muted leading-relaxed'>
+          <strong>Note:</strong> Icons and tags are community-driven. You can propose changes to a location's tags or suggest new locations by visiting the{' '}
+          <Link href="/contribute" className="text-primary-600 hover:text-primary-700 underline underline-offset-2 font-medium">
+            Contribute page
+          </Link>.
+        </p>
       </div>
     </div>
   );

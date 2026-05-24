@@ -22,6 +22,7 @@ import EditableJourneyPills, {
 import Notification, { Toast } from '../../../_components/Notificaiton';
 import JourneyCalendar from '../../../journey/_components/journey-calendar';
 import { cn } from '@/lib/utils';
+import { getDayColor } from '@/lib/colors';
 
 interface JourneyAreaPOI {
   id: string;
@@ -798,7 +799,8 @@ export default function JourneyArea({
                                   )}
                                 />
                               </div>
-                              <TextBody className='text-foreground text-[15px] font-bold'>
+                              <TextBody className='text-foreground text-[15px] font-bold flex items-center gap-2'>
+                                <span className={cn('w-2.5 h-2.5 rounded-full shadow-sm', getDayColor(dayNumber))} />
                                 {day.title || `Day ${dayNumber}`}
                               </TextBody>
                               <TextBody className='text-text-muted ml-3 pt-[2px] text-xs font-medium'>

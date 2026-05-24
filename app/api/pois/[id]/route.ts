@@ -15,11 +15,7 @@ export async function GET(
         const poi = await prisma.pOI.findUnique({
             where: { id },
             include: {
-                tags: {
-                    include: {
-                        cluster: true
-                    }
-                },
+                tags: true,
                 galleries: true,
                 address: true,
                 operatingHours: true,

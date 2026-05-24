@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@/lib/supabase/server';
+import { findTagSeedByName } from '@/lib/poi-tag-taxonomy';
 
 const DAILY_AI_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? '25');
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
@@ -113,7 +114,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         const targetJourney = await prisma.journey.findUnique({
           where: { id: body.attachJourneyId },
           include: {
-            itineraryItems: { include: { poi: { include: { tags: { include: { cluster: true } } } } } },
+            itineraryItems: { include: { poi: { include: { tags: true } } } },
             chats: { select: { id: true, title: true, createdAt: true, updatedAt: true } }
           }
         });
@@ -274,7 +275,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
 
       let pois = await prisma.pOI.findMany({
         include: {
-          tags: { select: { name: true, cluster: { select: { name: true } } } }
+          tags: { select: { name: true } }
         },
         take: 40
       });
@@ -285,7 +286,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         description: p.description,
         tags: p.tags.map(tag => ({
           name: tag.name,
-          cluster: tag.cluster?.name ?? null
+          cluster: findTagSeedByName(tag.name)?.clusterId ?? null
         }))
       }));
 
@@ -436,7 +437,7 @@ Return a helpful aiText and a full itinerary.
         include: {
           days: { orderBy: { dayNumber: 'asc' } },
           itineraryItems: {
-            include: { poi: { include: { tags: { include: { cluster: true } } } } },
+            include: { poi: { include: { tags: true } } },
             orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }]
           }
         }
@@ -458,7 +459,7 @@ Return a helpful aiText and a full itinerary.
       where: { id: journeyId },
       include: {
         days: { orderBy: { dayNumber: 'asc' } },
-        itineraryItems: { include: { poi: { include: { tags: { include: { cluster: true } } } } } }
+        itineraryItems: { include: { poi: { include: { tags: true } } } }
       }
     });
 
@@ -491,14 +492,14 @@ Return a helpful aiText and a full itinerary.
         ]
       } : {},
       include: {
-        tags: { select: { name: true, cluster: { select: { name: true } } } }
+        tags: { select: { name: true } }
       },
       take: 20
     });
     if (pois.length === 0) {
       pois = await prisma.pOI.findMany({
         include: {
-          tags: { select: { name: true, cluster: { select: { name: true } } } }
+          tags: { select: { name: true } }
         },
         take: 20
       });
@@ -509,7 +510,7 @@ Return a helpful aiText and a full itinerary.
       description: p.description,
       tags: p.tags.map(tag => ({
         name: tag.name,
-        cluster: tag.cluster?.name ?? null
+        cluster: findTagSeedByName(tag.name)?.clusterId ?? null
       }))
     }));
 
@@ -697,7 +698,7 @@ Update the journey as requested by the user, and respond to them!
       include: {
         days: { orderBy: { dayNumber: 'asc' } },
         itineraryItems: {
-          include: { poi: { include: { tags: { include: { cluster: true } } } } },
+          include: { poi: { include: { tags: true } } },
           orderBy: [{ dayNumber: 'asc' }, { orderIndex: 'asc' }]
         }
       }
@@ -735,7 +736,7 @@ export async function GET(request: Request) {
           include: {
             days: { orderBy: { dayNumber: 'asc' } },
             itineraryItems: {
-              include: { poi: { include: { tags: { include: { cluster: true } } } } },
+              include: { poi: { include: { tags: true } } },
               orderBy: [{ dayNumber: 'asc' }, { startTime: 'asc' }, { orderIndex: 'asc' }]
             },
             chats: {

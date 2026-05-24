@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { cn } from '@/lib/cn';
 import {
   Search,
   Edit,
@@ -27,6 +28,7 @@ export default function Chatbar({
   onNewJourney
 }: ChatbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     type: 'journey' | 'chat';
@@ -222,10 +224,16 @@ export default function Chatbar({
                 <Link
                   key={chat.id}
                   href={`/chat/${chat.id}`}
-                  className='group hover:bg-surface relative flex items-center justify-between gap-2 rounded-lg px-4 py-2 transition-colors'
+                  className={cn(
+                    'group relative flex items-center justify-between gap-2 rounded-lg px-4 py-2 transition-colors',
+                    pathname === `/chat/${chat.id}` ? 'bg-primary-50' : 'hover:bg-surface'
+                  )}
                 >
                   <div className='flex flex-1 flex-col gap-0.5 overflow-hidden'>
-                    <span className='text-text-main truncate text-[15px] font-medium'>
+                    <span className={cn(
+                      'truncate text-[15px] font-medium',
+                      pathname === `/chat/${chat.id}` ? 'text-primary-600' : 'text-text-main'
+                    )}>
                       {chat.title || 'Untitled'}
                     </span>
                     <span className='text-text-muted truncate text-[13px]'>

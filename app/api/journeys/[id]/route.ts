@@ -39,7 +39,7 @@ export async function GET(
           include: {
             poi: {
               include: {
-                tags: { include: { cluster: true } },
+                tags: true,
                 galleries: true,
                 address: true,
                 operatingHours: true,
@@ -206,7 +206,7 @@ export async function PATCH(
           include: {
             poi: {
               include: {
-                tags: { include: { cluster: true } }
+                tags: true
               }
             }
           },

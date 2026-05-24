@@ -18,12 +18,14 @@ interface PoiHoverCardProps {
   poi: POI;
   onFavorite?: (poiId: string) => void;
   onAdd?: (poiId: string) => void;
+  onClick?: (poiId: string) => void;
 }
 
 export default function PoiHoverCard({
   poi,
   onFavorite,
-  onAdd
+  onAdd,
+  onClick
 }: PoiHoverCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const images = useMemo(
@@ -73,7 +75,21 @@ export default function PoiHoverCard({
   };
 
   return (
-    <div className='bg-background flex w-64 flex-col overflow-hidden'>
+    <div 
+      className={cn(
+        'bg-background flex w-64 flex-col overflow-hidden transition-shadow',
+        onClick && 'cursor-pointer hover:shadow-lg'
+      )}
+      onClick={() => onClick?.(poi.id)}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={e => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick(poi.id);
+        }
+      }}
+    >
       {/* Top Half: Image Gallery Wrapper */}
       <div className='group relative h-40 w-full shrink-0 overflow-hidden'>
         {images.length > 0 ? (

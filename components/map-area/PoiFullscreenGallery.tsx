@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Share2 } from 'lucide-react';
+import { X, Share2, Loader2 } from 'lucide-react';
 import { PoiActionButtons } from './PoiActionButtons';
+import { Toast } from '@/app/(app)/_components/Notificaiton';
 
 import type { POIGallery } from '@/components/map-area/types';
 
@@ -27,10 +28,29 @@ export default function PoiFullscreenGallery({
   onShare
 }: PoiFullscreenGalleryProps) {
   const [mounted, setMounted] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}${window.location.pathname}?poi=${poiId}&gallery=true`;
+      await navigator.clipboard.writeText(url);
+      setToast({ message: 'Gallery link copied to clipboard', type: 'success' });
+      if (onShare) onShare();
+    } catch (err) {
+      setToast({ message: 'Failed to copy link', type: 'error' });
+    }
+  };
 
   if (!isOpen || !mounted) {
     return null;
@@ -63,7 +83,7 @@ export default function PoiFullscreenGallery({
           <button
             type='button'
             className='border-text-main text-text-main hover:bg-text-main/10 inline-flex h-9 w-9 items-center justify-center rounded-full border bg-transparent transition'
-            onClick={onShare}
+            onClick={handleShare}
             title='Share'
           >
             <Share2 className='h-4 w-4' />
@@ -91,6 +111,12 @@ export default function PoiFullscreenGallery({
           ))
         )}
       </div>
+
+      <Toast
+        isOpen={toast !== null}
+        message={toast?.message || ''}
+        type={toast?.type || 'success'}
+      />
     </div>,
     document.body
   );

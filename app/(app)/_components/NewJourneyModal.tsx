@@ -18,7 +18,7 @@ import JourneyDatePickerModal, { TimingData } from './JourneyDatePickerModal';
 import { formatDateSelection, formatFlexibleSelection, sortMonthsByTimeline } from '@/lib/date-utils';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 
-const DESTINATION_OPTIONS = ['Legazpi City', 'Daraga', 'Tabaco City', 'Ligao City', 'Camalig', 'Guinobatan', 'Polangui', 'Oas', 'Sorsogon City', 'Naga City', 'Iriga City', 'Bicol Region'];
+const DESTINATION_OPTIONS = ['Legazpi City'];
 
 export default function NewJourneyModal({
   open,
@@ -100,7 +100,7 @@ export default function NewJourneyModal({
   return (
     <>
       <div className='fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm'>
-        <div className='bg-background relative flex h-146 w-full max-w-225 overflow-hidden rounded-[24px] shadow-2xl'>
+        <div className='bg-background relative flex h-[600px] w-full max-w-4xl overflow-hidden rounded-[24px] shadow-2xl'>
           <button
             onClick={onClose}
             className='text-text-main hover:text-primary-500 absolute top-5 right-5 z-10 rounded-full p-1.5 transition-colors'
@@ -109,7 +109,7 @@ export default function NewJourneyModal({
             <CircleX size={24} />
           </button>
 
-          <div className='bg-primary-500 relative h-146 w-75 shrink-0 overflow-hidden'>
+          <div className='bg-primary-500 relative h-full w-[300px] shrink-0 overflow-hidden hidden md:block'>
             <Image
               src='/JourneySideImage.png'
               alt='Journey'
@@ -120,14 +120,14 @@ export default function NewJourneyModal({
             />
           </div>
 
-          <div className='flex h-146 flex-1 flex-col p-8'>
-            <div className='mb-6'>
+          <div className='flex h-full flex-1 flex-col p-8 overflow-hidden'>
+            <div className='mb-6 shrink-0'>
               <TextHeading className='text-3xl font-bold'>
                 Plan a new Journey
               </TextHeading>
             </div>
 
-            <div className='flex flex-1 flex-col gap-6 overflow-y-auto rounded-2xl'>
+            <div className='flex flex-1 flex-col gap-8 overflow-y-auto px-2 py-2 -mx-2'>
               <div>
                 <TextBody className='text-foreground mb-2 text-sm font-bold'>
                   Destination
@@ -181,7 +181,7 @@ export default function NewJourneyModal({
                             'w-full px-5 py-3 text-left text-[15px] transition-colors',
                             'hover:bg-primary-50 text-text-main',
                             companions === option &&
-                              'bg-primary-100 text-primary-900 font-semibold',
+                            'bg-primary-100 text-primary-900 font-semibold',
                             'not-last:border-border not-last:border-b',
                             'first:rounded-t-2xl last:rounded-b-2xl'
                           )}
@@ -225,7 +225,7 @@ export default function NewJourneyModal({
                             'w-full px-5 py-3 text-left text-[15px] transition-colors',
                             'hover:bg-primary-50 text-text-main',
                             budgetValue === option.value &&
-                              'bg-primary-100 text-primary-900 font-semibold',
+                            'bg-primary-100 text-primary-900 font-semibold',
                             'not-last:border-border not-last:border-b',
                             'first:rounded-t-2xl last:rounded-b-2xl'
                           )}
@@ -249,12 +249,12 @@ export default function NewJourneyModal({
                       'bg-surface text-text-main hover:bg-surface-light focus:ring-primary-500 flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center rounded-full border border-transparent px-4 py-3 text-center transition-all focus:ring-2 focus:ring-inset',
                       hasValidDates && 'ring-primary-300 ring-2',
                       timingData.selectedTimingType === 'dates' &&
-                        'ring-primary-500 shadow-primary-500/25 shadow-lg ring-2'
+                      'ring-primary-500 shadow-primary-500/25 shadow-lg ring-2'
                     )}
                   >
                     <span
                       className={cn(
-                        'max-w-full px-1 text-sm leading-tight wrap-break-word whitespace-normal',
+                        'max-w-full px-1 text-sm leading-tight break-words whitespace-normal',
                         hasValidDates ? 'font-semibold' : 'font-medium',
                         timingData.selectedTimingType === 'dates' && 'font-bold'
                       )}
@@ -268,15 +268,15 @@ export default function NewJourneyModal({
                       'bg-surface text-text-main hover:bg-surface-light focus:ring-primary-500 flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center rounded-full border border-transparent px-4 py-3 text-center transition-all focus:ring-2 focus:ring-inset',
                       hasValidFlexible && 'ring-secondary-300 ring-2',
                       timingData.selectedTimingType === 'flexible' &&
-                        'ring-secondary-500 shadow-secondary-500/25 shadow-lg ring-2'
+                      'ring-secondary-500 shadow-secondary-500/25 shadow-lg ring-2'
                     )}
                   >
                     <span
                       className={cn(
-                        'max-w-full px-1 text-sm leading-tight wrap-break-word whitespace-normal',
+                        'max-w-full px-1 text-sm leading-tight break-words whitespace-normal',
                         hasValidFlexible ? 'font-semibold' : 'font-medium',
                         timingData.selectedTimingType === 'flexible' &&
-                          'font-bold'
+                        'font-bold'
                       )}
                     >
                       {flexibleSummary || 'Flexible'}

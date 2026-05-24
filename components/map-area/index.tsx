@@ -412,6 +412,7 @@ export default function MapArea({
                   poi={poi}
                   onFavorite={id => console.log('Favorited', id)}
                   onAdd={id => handleOpenPoi(id)}
+                  onClick={id => handleOpenPoi(id)}
                 />
               )
             : undefined

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ThumbsUp, Bookmark, PlusCircle } from 'lucide-react';
+import { ThumbsUp, Bookmark, PlusCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import SelectJourneyModal from './SelectJourneyModal';
 import { Toast } from '@/app/(app)/_components/Notificaiton';
@@ -25,6 +25,8 @@ export function PoiActionButtons({
   const [isVouched, setIsVouched] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVouching, setIsVouching] = useState(false);
+  const [isFavoriting, setIsFavoriting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -61,6 +63,7 @@ export function PoiActionButtons({
     const wasVouched = isVouched;
     setIsVouched(!wasVouched);
     setVouchCount(prev => (wasVouched ? prev - 1 : prev + 1));
+    setIsVouching(true);
 
     try {
       const res = await fetch(`/api/pois/${poiId}/vouch`, { method: 'POST' });
@@ -73,6 +76,8 @@ export function PoiActionButtons({
       setIsVouched(wasVouched);
       setVouchCount(prev => (wasVouched ? prev + 1 : prev - 1));
       setToast({ message: 'Failed to vouch', type: 'error' });
+    } finally {
+      setIsVouching(false);
     }
   };
 
@@ -83,6 +88,7 @@ export function PoiActionButtons({
     // Optimistic update
     const wasFavorited = isFavorited;
     setIsFavorited(!wasFavorited);
+    setIsFavoriting(true);
 
     try {
       const res = await fetch(`/api/pois/${poiId}/favorite`, {
@@ -96,6 +102,8 @@ export function PoiActionButtons({
       // Revert optimistic update
       setIsFavorited(wasFavorited);
       setToast({ message: 'Failed to favorite', type: 'error' });
+    } finally {
+      setIsFavoriting(false);
     }
   };
 
@@ -105,19 +113,25 @@ export function PoiActionButtons({
         <button
           type='button'
           onClick={handleVouch}
-          disabled={isLoading}
-          title={isVouched ? 'Remove vouch' : 'Vouch for this location'}
+          disabled={isLoading || isVouching}
           className={cn(
-            'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
+            'group/vouch relative border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
             isVouched
               ? 'bg-primary-500 border-primary-500 hover:bg-primary-600 text-white'
               : 'hover:bg-muted',
             buttonClassName
           )}
         >
-          <ThumbsUp
-            className={cn('h-3.5 w-3.5', isVouched ? 'fill-white' : '')}
-          />
+          {layout === 'compact' && (
+            <span className='absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/vouch:opacity-100 pointer-events-none z-50 shadow-md'>
+              {isVouched ? 'Remove vouch' : 'Vouch'}
+            </span>
+          )}
+          {isVouching ? (
+            <Loader2 className={cn('h-3.5 w-3.5 animate-spin', isVouched ? 'text-white' : '')} />
+          ) : (
+            <ThumbsUp className={cn('h-3.5 w-3.5', isVouched ? 'fill-white' : '')} />
+          )}
           {layout === 'row' ? (
             <>
               <span>Vouch</span>
@@ -131,19 +145,25 @@ export function PoiActionButtons({
         <button
           type='button'
           onClick={handleFavorite}
-          disabled={isLoading}
-          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          disabled={isLoading || isFavoriting}
           className={cn(
-            'border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
+            'group/favorite relative border-foreground/40 text-foreground inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition disabled:opacity-50',
             isFavorited
               ? 'bg-primary-500 border-primary-500 hover:bg-primary-600 text-white'
               : 'hover:bg-muted',
             buttonClassName
           )}
         >
-          <Bookmark
-            className={cn('h-3.5 w-3.5', isFavorited ? 'fill-white' : '')}
-          />
+          {layout === 'compact' && (
+            <span className='absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/favorite:opacity-100 pointer-events-none z-50 shadow-md'>
+              {isFavorited ? 'Remove favorite' : 'Favorite'}
+            </span>
+          )}
+          {isFavoriting ? (
+            <Loader2 className={cn('h-3.5 w-3.5 animate-spin', isFavorited ? 'text-white' : '')} />
+          ) : (
+            <Bookmark className={cn('h-3.5 w-3.5', isFavorited ? 'fill-white' : '')} />
+          )}
           {layout === 'row' && 'Favorite'}
         </button>
 
@@ -154,12 +174,16 @@ export function PoiActionButtons({
             e.stopPropagation();
             setIsModalOpen(true);
           }}
-          title='Add this location to a journey'
           className={cn(
-            'border-foreground/40 text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition',
+            'group/add relative border-foreground/40 text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm transition',
             buttonClassName
           )}
         >
+          {layout === 'compact' && (
+            <span className='absolute -bottom-8 right-0 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover/add:opacity-100 pointer-events-none z-50 shadow-md'>
+              Add to Journey
+            </span>
+          )}
           <PlusCircle className='h-3.5 w-3.5' />
           {layout === 'row' && 'Add to Journey'}
         </button>
@@ -170,6 +194,7 @@ export function PoiActionButtons({
           open={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           poiId={poiId}
+          onSuccess={() => setToast({ message: 'Added to journey', type: 'success' })}
         />
       )}
 

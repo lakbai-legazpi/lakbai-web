@@ -221,10 +221,13 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
             window.dispatchEvent(new CustomEvent('toggle-chat-popup'));
           }}
           className={cn(
-            'group/link text-text-muted hover:text-text-main relative flex items-center transition-colors hover:bg-slate-100',
+            'group/link relative flex items-center transition-colors',
             isCollapsed
               ? 'h-12 w-12 justify-center rounded-xl'
-              : 'w-full rounded-lg px-3 py-3'
+              : 'w-full rounded-lg px-3 py-3',
+            pathname.startsWith('/chat')
+              ? 'bg-primary-50 text-primary-600'
+              : 'text-text-muted hover:text-text-main hover:bg-slate-100'
           )}
         >
           <MessageCircle size={24} strokeWidth={2} className='shrink-0' />

@@ -19,11 +19,7 @@ export async function GET(request: Request) {
         const pois = await prisma.pOI.findMany({
             where: whereClause,
             include: {
-                tags: {
-                    include: {
-                        cluster: true
-                    }
-                },
+                tags: true,
                 galleries: true,
                 address: true,
                 operatingHours: true,

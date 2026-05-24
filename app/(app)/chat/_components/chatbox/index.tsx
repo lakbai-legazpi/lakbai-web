@@ -386,7 +386,7 @@ export default function Chatbox({
 
       if (!res.ok) {
         setToast({
-          message: data?.error || 'Failed to send message.',
+          message: data?.error || 'AI chat is currently unavailable. Please try again later.',
           type: 'error'
         });
         setIsAiTyping(false);
@@ -406,6 +406,10 @@ export default function Chatbox({
       }
     } catch (e) {
       console.error(e);
+      setToast({
+        message: 'AI chat is currently unavailable. Please check your connection and try again.',
+        type: 'error'
+      });
     }
     setIsAiTyping(false);
   };

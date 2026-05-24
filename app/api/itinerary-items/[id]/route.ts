@@ -92,7 +92,7 @@ export async function PATCH(
       where: { id },
       data,
       include: {
-        poi: { include: { tags: { include: { cluster: true } } } },
+        poi: { include: { tags: true } },
       },
     });
 

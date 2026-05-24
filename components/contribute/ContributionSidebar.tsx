@@ -138,15 +138,18 @@ export function ContributionSidebar({
 }: ContributionSidebarProps) {
   const hasCoordinates = form.latitude.trim().length > 0 && form.longitude.trim().length > 0;
   
+  const [phoneErrors, setPhoneErrors] = useState<Record<number, string>>({});
+  const hasPhoneErrors = Object.keys(phoneErrors).length > 0;
+  
   // Navigate Steps
   const nextStep = () => onStepChange(currentStep + 1);
   const prevStep = () => onStepChange(currentStep - 1);
 
   // Validate basics step
-  const isBasicsValid = form.name.trim().length > 0 && form.primaryTagCluster.trim().length > 0 && form.primaryTagName.trim().length > 0;
+  const isBasicsValid = form.name.trim().length > 0 && form.primaryTagName.trim().length > 0;
 
   return (
-    <aside className='bg-surface border-border flex h-full w-[450px] shrink-0 flex-col border-r shadow-xl relative z-50'>
+    <aside className='bg-surface border-border flex h-full w-[450px] shrink-0 flex-col border-r shadow-xl relative z-10'>
       <div className='border-border border-b px-6 py-5 bg-surface'>
         <div className='flex items-center gap-2 mb-2'>
           <span className='text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full'>
@@ -261,23 +264,9 @@ export function ContributionSidebar({
 
               <div className='border-border bg-surface-light/50 space-y-4 rounded-xl border p-4'>
                 <p className='text-text-main text-sm font-semibold'>Category & Tags</p>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='flex flex-col gap-1.5'>
-                    <label className='text-text-muted text-[11px] font-semibold' htmlFor='contrib-cluster'>
-                      Cluster <span className='text-error-500'>*</span>
-                    </label>
-                    <AutocompleteInput
-                      id='contrib-cluster'
-                      placeholder='e.g. Food'
-                      required
-                      value={form.primaryTagCluster}
-                      onValueChange={val => onFormFieldChange('primaryTagCluster', val)}
-                      options={availableClusters}
-                    />
-                  </div>
-                  <div className='flex flex-col gap-1.5'>
-                    <label className='text-text-muted text-[11px] font-semibold' htmlFor='contrib-tag'>
-                      Tag <span className='text-error-500'>*</span>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-text-muted text-[11px] font-semibold' htmlFor='contrib-tag'>
+                    Tag <span className='text-error-500'>*</span>
                     </label>
                     <AutocompleteInput
                       id='contrib-tag'
@@ -287,7 +276,6 @@ export function ContributionSidebar({
                       onValueChange={val => onFormFieldChange('primaryTagName', val)}
                       options={availableTags}
                     />
-                  </div>
                 </div>
                 <div className='pt-2 border-t border-border'>
                   <p className='text-[11px] font-semibold text-text-muted mb-2'>Icon</p>
@@ -380,8 +368,11 @@ export function ContributionSidebar({
                       ] as [keyof ContributionAddressForm, string][]
                     ).map(([field, label]) => (
                       <div key={field} className='flex flex-col gap-1'>
-                        <label className='text-text-muted text-[11px] font-semibold' htmlFor={`contrib-address-${field}`}>{label}</label>
-                        <input id={`contrib-address-${field}`} type='text' value={form.address[field]} onChange={event => onAddressFieldChange(field, event.target.value)} className='border-border text-text-main bg-background focus:border-primary-400 rounded-md border px-3 py-1.5 text-xs transition outline-none' />
+                        <div className='flex items-center justify-between'>
+                          <label className='text-text-muted text-[11px] font-semibold' htmlFor={`contrib-address-${field}`}>{label}</label>
+                          <span className='text-[9px] text-slate-400'>{(form.address[field] || '').length}/100</span>
+                        </div>
+                        <input id={`contrib-address-${field}`} type='text' maxLength={100} value={form.address[field]} onChange={event => onAddressFieldChange(field, event.target.value)} className='border-border text-text-main bg-background focus:border-primary-400 rounded-md border px-3 py-1.5 text-xs transition outline-none' />
                       </div>
                     ))}
                   </div>
@@ -396,9 +387,12 @@ export function ContributionSidebar({
                     <button type='button' onClick={() => onAddContactField('websites')} className='text-primary-600 text-xs font-bold hover:underline'>+ Add</button>
                   </div>
                   {form.contact.websites.map((website, index) => (
-                    <div key={`website-${index}`} className='flex items-center gap-2'>
-                      <input type='url' placeholder='https://example.com' value={website} onChange={event => onContactFieldChange('websites', index, event.target.value)} className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-sm transition outline-none' />
-                      <button type='button' onClick={() => onRemoveContactField('websites', index)} className='text-text-muted hover:text-error-500 p-1.5 bg-surface rounded-md border border-border'><Trash2 className='h-4 w-4' /></button>
+                    <div key={`website-${index}`} className='flex flex-col gap-1'>
+                      <div className='flex items-center gap-2'>
+                        <input type='url' maxLength={200} placeholder='https://example.com' value={website} onChange={event => onContactFieldChange('websites', index, event.target.value)} className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-sm transition outline-none' />
+                        <button type='button' onClick={() => onRemoveContactField('websites', index)} className='text-text-muted hover:text-error-500 p-1.5 bg-surface rounded-md border border-border'><Trash2 className='h-4 w-4' /></button>
+                      </div>
+                      <span className='text-[10px] text-slate-400 text-right pr-10'>{(website || '').length}/200</span>
                     </div>
                   ))}
                 </div>
@@ -409,9 +403,33 @@ export function ContributionSidebar({
                     <button type='button' onClick={() => onAddContactField('phoneNumbers')} className='text-primary-600 text-xs font-bold hover:underline'>+ Add</button>
                   </div>
                   {form.contact.phoneNumbers.map((phone, index) => (
-                    <div key={`phone-${index}`} className='flex items-center gap-2'>
-                      <input type='tel' placeholder='+63 900 000 0000' value={phone} onChange={event => onContactFieldChange('phoneNumbers', index, event.target.value)} className='border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-sm transition outline-none' />
-                      <button type='button' onClick={() => onRemoveContactField('phoneNumbers', index)} className='text-text-muted hover:text-error-500 p-1.5 bg-surface rounded-md border border-border'><Trash2 className='h-4 w-4' /></button>
+                    <div key={`phone-${index}`} className='flex flex-col gap-1'>
+                      <div className='flex items-center gap-2'>
+                        <input
+                          type='tel'
+                          maxLength={20}
+                          placeholder='+63 900 000 0000'
+                          value={phone}
+                          onChange={event => {
+                            const val = event.target.value;
+                            onContactFieldChange('phoneNumbers', index, val);
+                            if (val && !/^\+?[0-9\s\-()]{7,20}$/.test(val)) {
+                              setPhoneErrors(prev => ({ ...prev, [index]: 'Invalid phone number format.' }));
+                            } else {
+                              setPhoneErrors(prev => { const n = {...prev}; delete n[index]; return n; });
+                            }
+                          }}
+                          className={cn('border-border text-text-main bg-background focus:border-primary-400 flex-1 rounded-lg border px-3 py-2 text-sm transition outline-none', phoneErrors[index] && 'border-error-500 focus:border-error-500')}
+                        />
+                        <button type='button' onClick={() => {
+                          onRemoveContactField('phoneNumbers', index);
+                          setPhoneErrors(prev => { const n = {...prev}; delete n[index]; return n; });
+                        }} className='text-text-muted hover:text-error-500 p-1.5 bg-surface rounded-md border border-border'><Trash2 className='h-4 w-4' /></button>
+                      </div>
+                      <div className='flex items-center justify-between pr-10'>
+                        <span className='text-[10px] text-error-500'>{phoneErrors[index] || ''}</span>
+                        <span className='text-[10px] text-slate-400'>{(phone || '').length}/20</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -460,7 +478,7 @@ export function ContributionSidebar({
               <button
                 type='button'
                 onClick={onSubmit}
-                disabled={submitStatus === 'loading' || submitStatus === 'success'}
+                disabled={submitStatus === 'loading' || submitStatus === 'success' || hasPhoneErrors}
                 className='bg-emerald-600 hover:bg-emerald-700 text-white flex flex-[2] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {submitStatus === 'loading' && <Loader2 className='h-4 w-4 animate-spin' />}

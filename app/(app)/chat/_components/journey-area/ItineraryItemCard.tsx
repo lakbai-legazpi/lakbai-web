@@ -7,6 +7,7 @@ import { Draggable } from '@hello-pangea/dnd';
 import { MapPin, MoreHorizontal, Eye, ArrowRightFromLine, ArrowLeftFromLine, Trash2, Clock } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import ItemTimeframeModal from './ItemTimeframeModal';
+import { getDayColor } from '@/lib/colors';
 
 interface JourneyAreaPOI {
   id: string;
@@ -93,7 +94,10 @@ export default function ItineraryItemCard({
             // Prevent some visual jumping during drag by ensuring default styling
           }}
         >
-          <div className='bg-primary-100 text-primary-800 p-2 rounded-full shrink-0 mt-0.5'>
+          <div className={cn(
+            'p-2 rounded-full shrink-0 mt-0.5',
+            isBasecamp ? 'bg-primary-100 text-primary-800' : `${getDayColor(item.dayNumber!)} text-white`
+          )}>
             <MapPin size={16} />
           </div>
           <div className='flex flex-col flex-1 pr-6'>

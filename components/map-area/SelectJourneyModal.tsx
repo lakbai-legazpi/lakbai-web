@@ -10,6 +10,7 @@ type SelectJourneyModalProps = {
   open: boolean;
   onClose: () => void;
   poiId: string;
+  onSuccess?: () => void;
 };
 
 type JourneySummary = {
@@ -21,7 +22,7 @@ type JourneySummary = {
   updatedAt: string;
 };
 
-export default function SelectJourneyModal({ open, onClose, poiId }: SelectJourneyModalProps) {
+export default function SelectJourneyModal({ open, onClose, poiId, onSuccess }: SelectJourneyModalProps) {
   const [journeys, setJourneys] = useState<JourneySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +63,7 @@ export default function SelectJourneyModal({ open, onClose, poiId }: SelectJourn
         body: JSON.stringify({ journeyId, poiId })
       });
       if (res.ok) {
+        if (onSuccess) onSuccess();
         onClose();
         window.dispatchEvent(new CustomEvent('journey-updated'));
         router.refresh();

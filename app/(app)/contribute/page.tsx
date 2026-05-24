@@ -55,7 +55,6 @@ function createInitialForm(): ContributionFormState {
   return {
     name: '',
     description: '',
-    primaryTagCluster: '',
     primaryTagName: '',
     primaryTagIcon: '',
     latitude: '',
@@ -98,12 +97,10 @@ function mapPoiToForm(poi: POI): ContributionFormState {
   const primaryIcon =
     primaryTag?.iconName ?? primaryTag?.cluster?.iconName ?? '';
   const primaryTagName = primaryTag?.name ?? '';
-  const primaryTagCluster = primaryTag?.cluster?.name ?? '';
 
   return {
     name: poi.name,
     description: poi.description ?? '',
-    primaryTagCluster,
     primaryTagName,
     primaryTagIcon: primaryIcon,
     latitude: poi.latitude.toString(),
@@ -497,10 +494,10 @@ export default function ContributePage() {
       galleries: form.galleryUploads.map(upload => ({ id: upload.id, imageUrl: upload.dataUrl })),
       reviews: editingPoi ? (editingPoi as any).reviews : [],
       tags: [{ 
-        id: 'preview-tag', 
+        id: `mock-tag-${Date.now()}`, 
         name: form.primaryTagName || 'Category', 
         iconName: form.primaryTagIcon,
-        cluster: { name: form.primaryTagCluster || 'Cluster' } 
+        clusterId: null
       }],
       priceLevel: (editingPoi as any)?.priceLevel
     };

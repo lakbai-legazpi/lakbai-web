@@ -93,13 +93,7 @@ model POIAddress {
   poi              POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
 }
 
-model POITagCluster {
-  id        String   @id
-  name      String   @unique
-  iconName  String
-  createdAt DateTime @default(now())
-  tags      POITag[]
-}
+
 
 model POITag {
   id             String         @id
@@ -107,7 +101,6 @@ model POITag {
   iconName       String?
   clusterId      String?
   primaryForPOIs POI[]          @relation("POIPrimaryTag")
-  cluster        POITagCluster? @relation(fields: [clusterId], references: [id])
   pois           POI[]          @relation("POITags")
 }
 
