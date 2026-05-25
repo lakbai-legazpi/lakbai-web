@@ -11,11 +11,7 @@ export default async function JourneyPage() {
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/');
-  }
-
-  const journeys = await prisma.journey.findMany({
+  const journeys = user ? await prisma.journey.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     select: {
@@ -42,7 +38,7 @@ export default async function JourneyPage() {
         }
       }
     }
-  });
+  }) : [];
 
   const initialJourneys: JourneyCardJourney[] = journeys.map(journey => ({
     id: journey.id,

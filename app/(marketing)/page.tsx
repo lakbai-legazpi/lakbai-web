@@ -8,12 +8,11 @@ import {
   TextBody
 } from '@/components/text';
 import { GithubLogo } from '@/components/icons/GithubLogo';
+import { NavAuthButtons } from '@/components/auth-provider';
 import {
-  AuthProvider,
-  NavAuthButtons,
   HeroCTA,
-  FooterActions, // Added import
-  LegalActions   // Added import
+  FooterActions,
+  LegalActions
 } from '@/app/(marketing)/_components/HeroActions';
 import { createClient } from '@/lib/supabase/server';
 
@@ -29,9 +28,7 @@ export default async function LandingPage() {
   }
 
   return (
-    // AuthProvider wraps the whole page so NavAuthButtons and HeroCTA
-    // share a single modal state (only one pair of modals rendered).
-    <AuthProvider>
+    <>
       <div 
         className='relative min-h-screen w-full overflow-hidden bg-slate-50 font-sans text-slate-900 selection:bg-blue-100'
         style={{
@@ -179,6 +176,6 @@ export default async function LandingPage() {
           </div>
         </footer>
       </div>
-    </AuthProvider>
+    </>
   );
 }

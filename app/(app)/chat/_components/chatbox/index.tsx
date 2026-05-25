@@ -398,6 +398,7 @@ export default function Chatbox({
       }
       if (data.journey) {
         setJourney(data.journey);
+        localStorage.setItem('guestJourneyId', data.journey.id);
       }
       if (data.chat?.messages) {
         setMessages(data.chat.messages);

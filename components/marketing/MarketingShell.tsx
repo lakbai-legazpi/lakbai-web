@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { TextSubheading, TextBody } from '@/components/text';
 import { GithubLogo } from '@/components/icons/GithubLogo';
+import { NavAuthButtons } from '@/components/auth-provider';
 import {
-  AuthProvider,
-  NavAuthButtons,
   FooterActions,
   LegalActions
 } from '@/app/(marketing)/_components/HeroActions';
@@ -19,7 +18,7 @@ export function MarketingShell({
   mainClassName?: string;
 }) {
   return (
-    <AuthProvider>
+    <>
       <div className='relative min-h-screen w-full overflow-hidden bg-white font-sans text-slate-900 selection:bg-blue-100'>
         <nav className='bg-surface border-border fixed top-0 z-50 w-full border-b'>
           <div className='mx-auto flex max-w-7xl items-center justify-between px-6 py-4'>
@@ -84,6 +83,6 @@ export function MarketingShell({
           </div>
         </footer>
       </div>
-    </AuthProvider>
+    </>
   );
 }

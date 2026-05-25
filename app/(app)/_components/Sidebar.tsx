@@ -20,6 +20,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
+import { useAuth } from '@/components/auth-provider';
 
 type UserProfile = {
   firstName: string | null;
@@ -46,6 +47,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const [isContributionsLoading, setIsContributionsLoading] = useState(false);
   const [contributionsError, setContributionsError] = useState<string | null>(null);
 
+  const { openLogin } = useAuth();
   const router = useRouter();
 
   const fetchContributions = async () => {
@@ -541,6 +543,10 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
             ref={profileTriggerRef}
             type='button'
             onClick={() => {
+              if (!userProfile) {
+                openLogin();
+                return;
+              }
               closeChatPopup();
               setIsProfileMenuOpen(prev => !prev);
             }}
@@ -567,9 +573,11 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               )}
             >
               <span className='text-text-main text-sm font-medium whitespace-nowrap'>
-                {userProfile?.firstName
-                  ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
-                  : 'User Profile'}
+                {userProfile
+                  ? userProfile.firstName
+                    ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                    : 'User Profile'
+                  : 'Sign In / Sign Up'}
               </span>
               <span className='text-text-muted text-xs whitespace-nowrap'>
                 {userProfile?.username ? `@${userProfile.username}` : ''}

@@ -12,16 +12,36 @@ const getStartOfDay = () => {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
-const isRateLimited = async (userId: string) => {
-  const startOfDay = getStartOfDay();
-  const usageCount = await prisma.message.count({
-    where: {
-      role: 'user',
-      createdAt: { gte: startOfDay },
-      chat: { userId }
-    }
-  });
-  return usageCount >= DAILY_AI_LIMIT;
+const guestRateLimits = new Map<string, { count: number; date: string }>();
+const GUEST_DAILY_LIMIT = 5;
+
+const isRateLimited = async (userId: string | null, request: Request) => {
+  const startOfDay = getStartOfDay().toISOString();
+  
+  if (userId) {
+    const usageCount = await prisma.message.count({
+      where: {
+        role: 'user',
+        createdAt: { gte: getStartOfDay() },
+        chat: { userId }
+      }
+    });
+    return usageCount >= DAILY_AI_LIMIT;
+  }
+
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const record = guestRateLimits.get(ip);
+  if (!record || record.date !== startOfDay) {
+    guestRateLimits.set(ip, { count: 1, date: startOfDay });
+    return false;
+  }
+  
+  if (record.count >= GUEST_DAILY_LIMIT) {
+    return true;
+  }
+  
+  record.count += 1;
+  return false;
 };
 
 const toDateOrNull = (value: string | null | undefined) => {
@@ -34,9 +54,6 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     const { message, chatId, journeyId, isNewContext, newJourneyData } = body;
@@ -89,7 +106,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         chat = await prisma.chat.create({
           data: {
             title: 'Untitled Chat',
-            userId: user.id
+            userId: user?.id || null
           }
         });
 
@@ -107,7 +124,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           include: { messages: { orderBy: { createdAt: 'asc' } } }
         });
 
-        if (!targetChat || targetChat.userId !== user.id) {
+        if (!targetChat || (targetChat.userId !== null && targetChat.userId !== user?.id)) {
           return NextResponse.json({ error: "Chat not found or unauthorized" }, { status: 404 });
         }
 
@@ -119,7 +136,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
           }
         });
 
-        if (!targetJourney || targetJourney.userId !== user.id) {
+        if (!targetJourney || (targetJourney.userId !== null && targetJourney.userId !== user?.id)) {
           return NextResponse.json({ error: "Journey not found or unauthorized" }, { status: 404 });
         }
 
@@ -165,7 +182,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               flexibleMonths: newJourneyData.dates?.months
                 ? JSON.stringify(newJourneyData.dates.months)
                 : null,
-              userId: user.id,
+              userId: user?.id || null,
               days: {
                 create: Array.from({ 
                   length: newJourneyData.dates?.isFlexible 
@@ -208,7 +225,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
               flexibleMonths: newJourneyData.dates?.months
                 ? JSON.stringify(newJourneyData.dates.months)
                 : null,
-              userId: user.id,
+              userId: user?.id || null,
               days: {
                 create: Array.from({ 
                   length: newJourneyData.dates?.isFlexible 
@@ -228,7 +245,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
             data: {
               journeyId: journey.id,
               title: `Journey to ${newJourneyData.destination}`,
-              userId: user.id,
+              userId: user?.id || null,
             }
           });
         }
@@ -250,7 +267,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
       include: { messages: { orderBy: { createdAt: 'asc' } } }
     });
 
-    if (!chat || chat.userId !== user.id) {
+    if (!chat || (chat.userId !== null && chat.userId !== user?.id)) {
       return NextResponse.json({ error: 'Chat not found or unauthorized' }, { status: 404 });
     }
 
@@ -259,7 +276,7 @@ Only output the raw JSON. Not wrapped in markdown blocks.
         return NextResponse.json({ error: 'Missing message' }, { status: 400 });
       }
 
-      if (await isRateLimited(user.id)) {
+      if (await isRateLimited(user?.id || null, request)) {
         return NextResponse.json(
           {
             error: 'Daily AI limit reached. Please try again tomorrow.',
@@ -379,7 +396,7 @@ Return a helpful aiText and a full itinerary.
           isFlexibleDates,
           flexibleDays: flexibleDays ?? null,
           flexibleMonths,
-          userId: user.id,
+          userId: user?.id || null,
           days: {
             create: Array.from({ length: derivedDayCount }).map((_, i) => ({
               dayNumber: i + 1,
@@ -463,11 +480,11 @@ Return a helpful aiText and a full itinerary.
       }
     });
 
-    if (!journey || journey.userId !== user.id) {
+    if (!journey || (journey.userId !== null && journey.userId !== user?.id)) {
       return NextResponse.json({ error: 'Journey not found or unauthorized' }, { status: 404 });
     }
 
-    if (await isRateLimited(user.id)) {
+    if (await isRateLimited(user?.id || null, request)) {
       return NextResponse.json(
         {
           error: 'Daily AI limit reached. Please try again tomorrow.',

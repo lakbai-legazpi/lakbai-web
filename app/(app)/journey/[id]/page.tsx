@@ -19,12 +19,14 @@ export default async function JourneyDetailsPage({
     data: { user }
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/');
-  }
-
-  const journey = await prisma.journey.findUnique({
-    where: { id, userId: user.id },
+  const journey = await prisma.journey.findFirst({
+    where: { 
+      id, 
+      OR: [
+        { userId: user?.id },
+        { userId: null }
+      ]
+    },
     include: {
       chats: {
         orderBy: { createdAt: 'desc' }

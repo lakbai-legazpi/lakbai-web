@@ -43,6 +43,8 @@ export async function POST(request: Request) {
     firstName?: string;
     lastName?: string;
     username?: string;
+    guestChatId?: string | null;
+    guestJourneyId?: string | null;
   } = {};
 
   try {
@@ -95,6 +97,20 @@ export async function POST(request: Request) {
       username: resolvedUsername,
     },
   });
+
+  if (body.guestChatId) {
+    await prisma.chat.updateMany({
+      where: { id: body.guestChatId, userId: null },
+      data: { userId: user.id }
+    });
+  }
+
+  if (body.guestJourneyId) {
+    await prisma.journey.updateMany({
+      where: { id: body.guestJourneyId, userId: null },
+      data: { userId: user.id }
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

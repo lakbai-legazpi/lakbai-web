@@ -36,6 +36,7 @@ export default function ChatClientLayout({
             });
             const data = await res.json();
             if (data.chat) {
+              localStorage.setItem('guestChatId', data.chat.id);
               router.refresh();
               router.replace(`/chat/${data.chat.id}`);
             }

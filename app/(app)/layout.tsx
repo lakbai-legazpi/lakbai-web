@@ -22,16 +22,12 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/');
-  }
-
-  const chats = await prisma.chat.findMany({
+  const chats = user ? await prisma.chat.findMany({
     where: { userId: user.id },
     orderBy: { updatedAt: 'desc' },
-  });
+  }) : [];
 
-  const rawJourneys = await prisma.journey.findMany({
+  const rawJourneys = user ? await prisma.journey.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -49,17 +45,17 @@ export default async function AppLayout({
         }
       }
     }
-  });
+  }) : [];
 
   const journeys = rawJourneys.map(journey => ({
     ...journey,
     coverImageUrl: pickJourneyCoverImage(journey.itineraryItems)
   }));
 
-  const dbUser = await prisma.user.findUnique({
+  const dbUser = user ? await prisma.user.findUnique({
     where: { id: user.id },
     select: { firstName: true, lastName: true, username: true, avatarSeed: true, avatarOptions: true }
-  });
+  }) : null;
 
   return (
     <div className='flex h-screen w-full flex-row'>
