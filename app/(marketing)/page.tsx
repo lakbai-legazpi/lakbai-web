@@ -17,15 +17,11 @@ import {
 import { createClient } from '@/lib/supabase/server';
 
 export default async function LandingPage() {
-  // Server-side session check — redirect authenticated users straight to /chat
+  // Server-side session check
   const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect('/chat');
-  }
 
   return (
     <>

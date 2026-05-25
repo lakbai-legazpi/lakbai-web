@@ -83,7 +83,12 @@ export default function Chatbox({
         // Only redirect if the chat genuinely doesn't exist (404)
         if (res.status === 404) {
           const chat = await createBlankChat();
-          if (chat) router.replace(`/chat/${chat.id}`);
+          if (chat) {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('guestChatId', chat.id);
+            }
+            router.replace(`/chat/${chat.id}`);
+          }
           return;
         }
 

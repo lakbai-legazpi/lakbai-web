@@ -17,7 +17,8 @@ import {
   UserCircle,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Info
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAuth } from '@/components/auth-provider';
@@ -33,7 +34,9 @@ type UserProfile = {
 export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isInfoMenuOpen, setIsInfoMenuOpen] = useState(false);
   const [collapsedMenuTop, setCollapsedMenuTop] = useState<number | null>(null);
+  const [collapsedInfoMenuTop, setCollapsedInfoMenuTop] = useState<number | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const iconTooltipClass =
     'pointer-events-none absolute top-1/2 left-full z-40 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-primary-dark-700 bg-primary-dark-900 px-2.5 py-1.5 text-xs font-medium text-primary-dark-50 opacity-0 shadow-sm transition-opacity';
@@ -42,6 +45,8 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const profileTriggerRef = useRef<HTMLButtonElement>(null);
   const profileMenuContentRef = useRef<HTMLDivElement>(null);
+  const infoMenuRef = useRef<HTMLDivElement>(null);
+  const infoTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [isContributionsLoading, setIsContributionsLoading] = useState(false);
@@ -81,6 +86,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
 
   const handleLogout = async () => {
     setIsProfileMenuOpen(false);
+    setIsInfoMenuOpen(false);
     await fetch('/api/auth/sign-out', { method: 'POST' });
     router.push('/');
     router.refresh();
@@ -102,6 +108,12 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
       ) {
         setIsProfileMenuOpen(false);
       }
+      if (
+        infoMenuRef.current &&
+        !infoMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsInfoMenuOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', onPointerDown);
@@ -109,24 +121,39 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
   }, []);
 
   useEffect(() => {
-    if (!isProfileMenuOpen || !isCollapsed) {
+    if ((!isProfileMenuOpen && !isInfoMenuOpen) || !isCollapsed) {
       setCollapsedMenuTop(null);
+      setCollapsedInfoMenuTop(null);
       return;
     }
 
     const updateCollapsedMenuPosition = () => {
-      const triggerEl = profileTriggerRef.current;
-      const menuEl = profileMenuContentRef.current;
-      if (!triggerEl || !menuEl) return;
-
-      const triggerRect = triggerEl.getBoundingClientRect();
-      const menuRect = menuEl.getBoundingClientRect();
       const spacing = 8;
       const safeTop = 8;
 
-      setCollapsedMenuTop(
-        Math.max(safeTop, triggerRect.top - menuRect.height - spacing)
-      );
+      if (isProfileMenuOpen) {
+        const triggerEl = profileTriggerRef.current;
+        const menuEl = profileMenuContentRef.current;
+        if (triggerEl && menuEl) {
+          const triggerRect = triggerEl.getBoundingClientRect();
+          const menuRect = menuEl.getBoundingClientRect();
+          setCollapsedMenuTop(
+            Math.max(safeTop, triggerRect.top - menuRect.height - spacing)
+          );
+        }
+      }
+
+      if (isInfoMenuOpen) {
+        const triggerEl = infoTriggerRef.current;
+        const menuEl = infoMenuRef.current?.querySelector('.info-menu-content') as HTMLDivElement | null;
+        if (triggerEl && menuEl) {
+          const triggerRect = triggerEl.getBoundingClientRect();
+          const menuRect = menuEl.getBoundingClientRect();
+          setCollapsedInfoMenuTop(
+            Math.max(safeTop, triggerRect.top - menuRect.height - spacing)
+          );
+        }
+      }
     };
 
     updateCollapsedMenuPosition();
@@ -134,7 +161,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
 
     return () =>
       window.removeEventListener('resize', updateCollapsedMenuPosition);
-  }, [isCollapsed, isProfileMenuOpen]);
+  }, [isCollapsed, isProfileMenuOpen, isInfoMenuOpen]);
 
   return (
     <aside
@@ -393,6 +420,7 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
           onClick={() => {
             closeChatPopup();
             setIsProfileMenuOpen(false);
+            setIsInfoMenuOpen(false);
             setIsNotificationsOpen(prev => !prev);
           }}
           className={cn(
@@ -584,6 +612,75 @@ export function Sidebar({ userProfile }: { userProfile?: UserProfile | null }) {
               </span>
             </div>
           </button>
+        </div>
+
+        {/* Info Area */}
+        <div ref={infoMenuRef} className='relative w-full'>
+          {isInfoMenuOpen && (
+            <div
+              className={cn(
+                'info-menu-content border-border bg-surface z-50 overflow-hidden rounded-lg border shadow-lg',
+                isCollapsed
+                  ? 'fixed left-4 w-64'
+                  : 'absolute bottom-full left-0 mb-2 w-62.5'
+              )}
+              style={
+                isCollapsed && collapsedInfoMenuTop !== null
+                  ? { top: collapsedInfoMenuTop }
+                  : undefined
+              }
+            >
+              <div className='p-4 flex flex-col gap-3 bg-white'>
+                <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
+                  <Link href='/' onClick={() => setIsInfoMenuOpen(false)} className='hover:text-slate-900 transition-colors'>Company</Link>
+                  <span className='text-slate-300'>•</span>
+                  <Link href='/contact' onClick={() => setIsInfoMenuOpen(false)} className='hover:text-slate-900 transition-colors'>Contact</Link>
+                </div>
+                <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
+                  <Link href='/terms' onClick={() => setIsInfoMenuOpen(false)} className='hover:text-slate-900 transition-colors'>Terms</Link>
+                  <span className='text-slate-300'>•</span>
+                  <Link href='/privacy' onClick={() => setIsInfoMenuOpen(false)} className='hover:text-slate-900 transition-colors'>Privacy</Link>
+                </div>
+                <div className='text-[11px] text-slate-400 mt-1'>
+                  © 2026 Lakbai
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isCollapsed ? (
+            <button
+              ref={infoTriggerRef}
+              type='button'
+              onClick={() => {
+                closeChatPopup();
+                setIsProfileMenuOpen(false);
+                setIsInfoMenuOpen(prev => !prev);
+              }}
+              className='group/info text-text-muted relative flex items-center justify-center transition-colors hover:bg-slate-100 h-12 w-12 rounded-xl mt-4 mx-auto'
+            >
+              <Info size={24} className='shrink-0' />
+              <span className={cn(iconTooltipClass, 'group-hover/info:opacity-100')}>
+                Info
+              </span>
+            </button>
+          ) : (
+            <div className='flex flex-col gap-2 px-2 pt-6 pb-2'>
+              <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
+                <Link href='/' className='hover:text-slate-900 transition-colors'>Company</Link>
+                <span className='text-slate-300'>•</span>
+                <Link href='/contact' className='hover:text-slate-900 transition-colors'>Contact</Link>
+              </div>
+              <div className='flex items-center gap-3 text-xs font-medium text-slate-500'>
+                <Link href='/terms' className='hover:text-slate-900 transition-colors'>Terms</Link>
+                <span className='text-slate-300'>•</span>
+                <Link href='/privacy' className='hover:text-slate-900 transition-colors'>Privacy</Link>
+              </div>
+              <div className='text-[11px] text-slate-400 mt-1'>
+                © 2026 Lakbai
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </aside>

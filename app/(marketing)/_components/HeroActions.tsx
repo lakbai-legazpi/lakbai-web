@@ -52,21 +52,12 @@ export function LegalActions() {
 }
 
 export function HeroCTA() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  const handleClick = () => {
-    setLoading(true);
-    router.push('/chat');
-  };
-
   return (
-    <button
-      onClick={handleClick}
-      disabled={loading}
-      className='group bg-primary-500 text-background flex items-center justify-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed min-w-[240px]'
+    <Link
+      href='/chat'
+      className='group bg-primary-500 text-background flex items-center justify-center gap-3 rounded-full px-10 py-5 text-lg font-semibold hover:cursor-pointer hover:opacity-90 min-w-[240px]'
     >
-      {loading ? <Loader2 className="animate-spin text-white" /> : 'Start your journey'}
-    </button>
+      Start your journey
+    </Link>
   );
 }

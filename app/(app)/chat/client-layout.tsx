@@ -26,6 +26,13 @@ export default function ChatClientLayout({
         // Auto-redirect to the most recent chat
         router.replace(`/chat/${initialChats[0].id}`);
       } else {
+        // Check if guest already has a chat
+        const guestChatId = typeof window !== 'undefined' ? localStorage.getItem('guestChatId') : null;
+        if (guestChatId) {
+          router.replace(`/chat/${guestChatId}`);
+          return;
+        }
+
         // Automatically create a blank chat if no chats exist
         const createBlankChat = async () => {
           try {
@@ -37,7 +44,6 @@ export default function ChatClientLayout({
             const data = await res.json();
             if (data.chat) {
               localStorage.setItem('guestChatId', data.chat.id);
-              router.refresh();
               router.replace(`/chat/${data.chat.id}`);
             }
           } catch (e) {

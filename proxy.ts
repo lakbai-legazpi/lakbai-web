@@ -41,12 +41,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Redirect authenticated users away from the landing page to /chat
-  if (user && pathname === '/') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/chat';
-    return NextResponse.redirect(url);
-  }
+  // Removed redirect for authenticated users away from the landing page
+  // so they can visit the Company (Marketing) page via the Sidebar Info link.
 
   // Protect all app routes — redirect unauthenticated users to /
   const publicPaths = new Set([
@@ -60,6 +56,7 @@ export async function proxy(request: NextRequest) {
 
   const isPublicRoute =
     publicPaths.has(pathname) ||
+    pathname.startsWith('/chat') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/logos') ||
