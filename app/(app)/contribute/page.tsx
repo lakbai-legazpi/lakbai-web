@@ -55,6 +55,7 @@ function createInitialForm(): ContributionFormState {
   return {
     name: '',
     description: '',
+    primaryTagCluster: '',
     primaryTagName: '',
     primaryTagIcon: '',
     latitude: '',
@@ -97,10 +98,12 @@ function mapPoiToForm(poi: POI): ContributionFormState {
   const primaryIcon =
     primaryTag?.iconName ?? primaryTag?.cluster?.iconName ?? '';
   const primaryTagName = primaryTag?.name ?? '';
+  const primaryTagCluster = primaryTag?.cluster?.name ?? '';
 
   return {
     name: poi.name,
     description: poi.description ?? '',
+    primaryTagCluster,
     primaryTagName,
     primaryTagIcon: primaryIcon,
     latitude: poi.latitude.toString(),
